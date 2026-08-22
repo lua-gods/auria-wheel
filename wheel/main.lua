@@ -27,6 +27,7 @@ myModels:remove()
 
 ---@type Texture
 local myTexture = textures[(...):gsub(".$", "%1."):gsub("/", ".").."texture"]
+local myTextureSize = myTexture:getDimensions()
 
 local iconModelTemplate = myModels.icon:remove()
 iconModelTemplate:setLight(15, 15)
@@ -47,16 +48,17 @@ local selectedActionPage = nil
 
 local oldVisibleAnim, visibleAnim = 0, 0
 
-local whitePixel = textures.whitePixel or textures:newTexture('whitePixel', 1, 1):setPixel(0, 0, 1, 1, 1)
 local hudOverlay = hudModel:newSprite("overlay")
 local overlayColor = vec(0.2, 0.22, 0.25)
-hudOverlay:setTexture(whitePixel, 2, 2)
+hudOverlay:setTexture(myTexture, myTextureSize:unpack())
+   :setRegion(1, 1)
 
--- keybinds:fromVanilla("figura.config.action_wheel_button")
-local keybind = keybinds:of("Open wheel", "key.keyboard.v")
+local keybind = keybinds:fromVanilla("figura.config.action_wheel_button")
+-- local keybind = keybinds:of("Open wheel", "key.keyboard.v")
 keybind.press = function()
    isEnabled = true
    host:setUnlockCursor(true)
+   return true
 end
 keybind.release = function()
    if isEnabled then
@@ -68,11 +70,8 @@ local leftClickKey = keybinds:of("Left click", "key.mouse.left")
 local RightClickKey = keybinds:of("Right click", "key.mouse.right")
 
 local hueUVMatrix = matrices.mat3()
-do
-   local size = myTexture:getDimensions()
-   hueUVMatrix:scale(6, 0, 1)
-      :translate(7.5 / size.x, 0.5 / size.y)
-end
+hueUVMatrix:scale(6, 0, 1)
+   :translate(7.5 / myTextureSize.x, 0.5 / myTextureSize.y)
 
 ---@return auria.wheel.page
 function mod.newPage()
@@ -486,7 +485,7 @@ hudModelRoot.preRender = function(delta)
    local centerOffset = vec(-winSize.x * 0.5, -winSize.y * 0.5, 0)
    hudModel:setPos(centerOffset)
    hudOverlay:setPos(vec(0, 0, 50) - centerOffset)
-      :setScale(winSize.x, winSize.y, 0)
+      :setScale((winSize / myTextureSize):augmented(0))
       :setColor(overlayColor:augmented(globalVisible * 0.5))
    if currentPage then
       getRenderPage(currentPage)

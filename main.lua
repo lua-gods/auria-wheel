@@ -40,3 +40,11 @@ end
 -- page:newButton()
 -- page:newButton()
 -- page:newButton()
+
+-- page:newToggle()
+--    :setTitle("cat")
+--    :setValue(true)
+--    :setOnChange(function(value)
+--       print(value)
+--    end)
+--    :setIconEmoji(":cat:")

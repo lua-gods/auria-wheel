@@ -7,6 +7,7 @@ local blurApplied = nil
 ---@class auria.wheel.page
 local Page = {}
 Page.__index = Page
+mod.page = Page
 
 ---@class auria.wheel.action
 local Action = {}
@@ -15,6 +16,7 @@ Action.__index = Action
 local hudModelRoot = models:newPart("", "HUD")
 local hudModel = hudModelRoot:newPart("")
 hudModelRoot:setOverlay(0, 15)
+hudModel:setVisible(false)
 
 local isEnabled = false
 
@@ -73,9 +75,8 @@ end
 local leftClickKey = keybinds:of("Left click", "key.mouse.left")
 local RightClickKey = keybinds:of("Right click", "key.mouse.right")
 
-local hueUVMatrix = matrices.mat3()
-hueUVMatrix:scale(6, 0, 1)
-   :translate(7.5 / myTextureSize.x, 0.5 / myTextureSize.y)
+---@types {[string]: auria.wheel.action_data}
+local actionTypes = {}
 
 ---@return auria.wheel.page
 function mod.newPage()
@@ -103,33 +104,10 @@ local function getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
 end
 
----@return auria.wheel.action
-function Page:newAction()
-   ---@class auria.wheel.action
-   local obj = {
-      title = "Hello World"..#self.actions,
-      icon = models:newPart(""):remove(),
-      ---@type (fun(opacity: number))?
-      iconRender = nil,
-      ---@type auria.wheel.page?
-      page = nil,
-      ---@type function?
-      press = nil,
-      ---@type function?
-      release = nil,
-      ---@type "button"|"colorpicker"|"hue"
-      type = "button",
-   }
-   setmetatable(obj, Action)
-   table.insert(self.actions, obj)
-   obj.icon:newItem(""):setItem("diamond")
-
-   self:rebuildActions()
-   return obj
-end
-
+---@generic self
+---@param self self
 ---@param text string
----@return auria.wheel.action
+---@return self
 function Action:setIconEmoji(text)
    local model = models:newPart(""):remove()
    local task = model:newText("")
@@ -144,9 +122,12 @@ function Action:setIconEmoji(text)
    return self
 end
 
+---@generic self
+---@param self self
 ---@param texture Texture
 ---@param pos Vector2
 ---@param size Vector2
+---@return self
 function Action:setIconTexture(texture, pos, size)
    local model = mod.models.icon:copy("")
    model:setPrimaryTexture("CUSTOM", texture)
@@ -158,6 +139,86 @@ function Action:setIconTexture(texture, pos, size)
    self.icon = model
    self.iconRender = nil
    return self
+end
+
+---@generic self
+---@param self self
+---@param item ItemStack|Minecraft.itemID|string
+---@param displayMode? ItemTask.displayMode
+---@return self
+function Action:setIconItem(item, displayMode)
+   local model = models:newPart(""):remove()
+   local itemTask = model:newItem("")
+   itemTask:setItem(item)
+   itemTask:setDisplayMode(displayMode or "GUI")
+   self.icon = model
+   self.iconRender = nil
+   return self
+end
+
+---makes action with specified type
+---@param myType string
+---@param page? auria.wheel.page
+---@return auria.wheel.action|any
+function mod.newAction(myType, page)
+   ---@class auria.wheel.action
+   local obj = {
+      title = "Hello!",
+      ---@type ModelPart
+      icon = nil,
+      ---@type (fun(opacity: number))?
+      iconRender = nil,
+      ---@type auria.wheel.page?
+      page = nil,
+      ---@type function?
+      press = nil,
+      ---@type function?
+      release = nil,
+      type = myType,
+   }
+   setmetatable(obj, Action)
+   Action:setIconItem("glass_pane")
+   if page then
+      table.insert(page.actions, obj)
+      page:rebuildActions()
+   end
+   return obj
+end
+
+---@alias auria.wheel.action_data {
+---methods: {[string]: function},
+---mt: table,
+---makePopup: (fun(action: auria.wheel.action, model: ModelPart)),
+---}
+
+---@param myType string
+---@param data auria.wheel.action_data
+function mod.newActionType(myType, data)
+   -- add built in methods
+   data.methods = data.methods or {}
+   local methods = data.methods
+   for i, v in pairs(Action) do
+      if not methods[i] then
+         methods[i] = v
+      end
+   end
+   local mt = {__index = methods}
+   data.mt = mt
+
+   actionTypes[myType] = data
+end
+
+---@param action auria.wheel.action
+---@return auria.wheel.action_data
+function mod.getActionData(action)
+   return actionTypes[action.type]
+end
+
+mod.newActionType("normal", {methods = {}})
+
+---@return auria.wheel.action
+function Page:newAction()
+   return mod.newAction("normal", self)
 end
 
 local function getActionsRotScaleAndOffset(count)
@@ -225,50 +286,20 @@ function mod.setAndPushToHistory(page)
    setPageRaw(page)
 end
 
----@param action auria.wheel.action
-local function makeActionPopup(action)
-   if getSelectedAction() ~= action then
-      return
-   end
+---creates popup for currently seelcted action
+local function makeActionPopup()
+   local action = getSelectedAction()
    local pageData = getRenderPage(selectedActionPage)
    local actionData = pageData.actions[selectedActionidx]
    if not actionData then return end
    if actionData.popup then return end
-
+   local actionTypeData = mod.getActionData(action)
+   if not actionTypeData.makePopup then
+      return
+   end
    local model = pageData.model:newPart("")
-   for _, v in pairs(mod.models.slider:getChildren()) do
-      v:copy(v:getName())
-         :light(15, 15)
-         :moveTo(model)
-   end
-   model:newText("")
-      :setText("mrrow")
-   local size = vec(96, 12)
-   -- local bg = uiSpriteTemplate:copy("")
-   -- local outline = uiSpriteTemplate:copy("")
-   if action.type == "colorpicker" or action.type == "hue" then
-      model.bg:setPrimaryRenderType("BLURRY")
-      if action.type == "hue" then
-         model.bg:setUVMatrix(hueUVMatrix)
-         model.indicator:setColor(0, 0, 0)
-      else
-         size = vec(128, 128)
-         model.bg:setUVPixels(3.5, 0.5)
-      end
-   else
-      model.indicator:setVisible(false)
-   end
-   local size2 = size:augmented(0)
-   model.bg:setScale(size2)
-      :setPos(size2 / -2 + vec(0, 0, -1))
-   model.outline1:setPos(size2 / 2):scale(size.x + 4, 2, 1)
-   model.outline2:setPos(size2 / -2):scale(size.x + 4, 2, 1)
-   model.outline3:setPos(size2 / 2):scale(2, size.y, 1)
-   model.outline4:setPos(size2 / -2):scale(2, size.y, 1)
-   -- outline:setScale(size.x + 4, size.y + 4, 0)
-      -- :setPos(size2 / -2 + vec(-2, -2, 2))
-      -- :setUVPixels(1, 0)
-   ---@class auria.wheel.action.popup
+   actionTypeData.makePopup(action, model)
+   ---@class auria.wheel.action_popup
    actionData.popup = {
       model = model,
       visible = 0,
@@ -287,8 +318,8 @@ function mod.clickAction(action, release)
    end
    if action.page then
       mod.setAndPushToHistory(action.page)
-   else
-      makeActionPopup(action)
+   elseif action == getSelectedAction() then
+      makeActionPopup()
    end
    if action.press then
       action.press()
@@ -435,7 +466,7 @@ local function renderPage(page, delta, globalVisible)
             selected = 0,
             oldSelected = 0,
             text = textTask,
-            ---@type auria.wheel.action.popup?
+            ---@type auria.wheel.action_popup?
             popup = nil,
          }
          textTask:setText(action.title)

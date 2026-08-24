@@ -15,7 +15,12 @@ do
    slider:setBackground(wheel.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
 end
 for k = 1, 4 do
-   local btn = page:newAction()
+   local btn
+   if k == 3 then
+      btn = page:newSlider()
+   else
+      btn = page:newAction()
+   end
    if k == 1 or k == 4 then
       local page2 = wheel.newPage()
       for a = 1, 8 do

@@ -397,19 +397,23 @@ function events.tick()
       data.scale = math.lerp(data.scale, target, 0.5)
       for i, actionData in pairs(data.actions) do
          local action = page.actions[i]
-         local myTarget = 0
-         if action == selectedAction then
-            myTarget = 1
-         end
-         actionData.oldSelected = actionData.selected
-         actionData.selected = math.lerp(actionData.selected, myTarget, 0.5)
          local popup = actionData.popup
+         local myTarget = 1.5
+         if action == selectedAction then
+            myTarget = 2
+            if isClicked and not popup then
+               myTarget = 1.75
+            end
+         end
+         actionData.oldScale = actionData.scale
+         actionData.scale = math.lerp(actionData.scale, myTarget, 0.5)
          if popup then
-            if not isClicked then
-               myTarget = 0
+            local popupTarget = 0
+            if action == selectedAction and isClicked then
+               popupTarget = 1
             end
             popup.oldVisible = popup.visible
-            popup.visible = math.lerp(popup.visible, myTarget, 0.5)
+            popup.visible = math.lerp(popup.visible, popupTarget, 0.5)
             if popup.visible < 0.0001 then
                popup.model:remove()
                actionData.popup = nil
@@ -465,8 +469,8 @@ local function renderPage(page, delta, globalVisible)
          ---@class auria.wheel.action.render
          data.actions[i] = {
             model = model,
-            selected = 0,
-            oldSelected = 0,
+            scale = 0,
+            oldScale = 0,
             text = textTask,
             ---@type auria.wheel.action_popup?
             popup = nil,
@@ -492,9 +496,9 @@ local function renderPage(page, delta, globalVisible)
    for i, actionData in pairs(data.actions) do
       local rot = i * rotScale + rotOffset
       local pos = vec(-math.sin(rot), math.cos(rot), 0) * posScale
-      local selected = math.lerp(actionData.oldSelected, actionData.selected, delta)
+      local scale = math.lerp(actionData.oldScale, actionData.scale, delta)
       actionData.model:setPos(pos)
-         :setScale((1.5 + selected * 0.5) * sizeScale)
+         :setScale(scale * sizeScale)
       actionData.text:setOpacity(opacity)
 
       local action = page.actions[i]

@@ -3,9 +3,17 @@ local wheel = require("wheel.main")
 local page = wheel.newPage()
 wheel.setPage(page)
 
-page:newSlider()
-page:newSlider()
-   :setIconEmoji(":cat:")
+do
+   local slider = page:newSlider()
+      :setIconEmoji(":cat:")
+   slider:setBackground(wheel.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
+      :setBackgroundSize(vec(128, 128))
+end
+do
+   local slider = page:newSlider()
+      :setIconEmoji(":cat:")
+   slider:setBackground(wheel.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
+end
 for k = 1, 4 do
    local btn = page:newAction()
    if k == 1 or k == 4 then

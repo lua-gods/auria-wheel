@@ -11,7 +11,6 @@ mod.page = Page
 
 ---@class auria.wheel.action
 local Action = {}
-Action.__index = Action
 
 local hudModelRoot = models:newPart("", "HUD")
 local hudModel = hudModelRoot:newPart("")
@@ -75,7 +74,7 @@ end
 local leftClickKey = keybinds:of("Left click", "key.mouse.left")
 local RightClickKey = keybinds:of("Right click", "key.mouse.right")
 
----@types {[string]: auria.wheel.action_data}
+---@type {[string]: auria.wheel.action_data}
 local actionTypes = {}
 
 ---@return auria.wheel.page
@@ -176,8 +175,8 @@ function mod.newAction(myType, page)
       release = nil,
       type = myType,
    }
-   setmetatable(obj, Action)
-   Action:setIconItem("glass_pane")
+   setmetatable(obj, actionTypes[myType].mt)
+   obj:setIconItem("glass_pane")
    if page then
       table.insert(page.actions, obj)
       page:rebuildActions()
@@ -189,11 +188,13 @@ end
 ---methods: {[string]: function},
 ---mt: table,
 ---makePopup: (fun(action: auria.wheel.action, model: ModelPart)),
+---press: (fun(action: auria.wheel.action)),
 ---}
 
 ---@param myType string
 ---@param data auria.wheel.action_data
 function mod.newActionType(myType, data)
+   data.press = data.press or function() end
    -- add built in methods
    data.methods = data.methods or {}
    local methods = data.methods
@@ -214,7 +215,7 @@ function mod.getActionData(action)
    return actionTypes[action.type]
 end
 
-mod.newActionType("normal", {methods = {}})
+mod.newActionType("normal", {})
 
 ---@return auria.wheel.action
 function Page:newAction()
@@ -286,13 +287,14 @@ function mod.setAndPushToHistory(page)
    setPageRaw(page)
 end
 
----creates popup for currently seelcted action
-local function makeActionPopup()
-   local action = getSelectedAction()
+---creates popup for action
+---@param action auria.wheel.action
+---@return auria.wheel.action_popup?
+function mod.makeActionPopup(action)
    local pageData = getRenderPage(selectedActionPage)
    local actionData = pageData.actions[selectedActionidx]
    if not actionData then return end
-   if actionData.popup then return end
+   if actionData.popup then return actionData.popup end
    local actionTypeData = mod.getActionData(action)
    if not actionTypeData.makePopup then
       return
@@ -305,6 +307,7 @@ local function makeActionPopup()
       visible = 0,
       oldVisible = 0,
    }
+   return actionData.popup
 end
 
 ---@param action auria.wheel.action
@@ -318,9 +321,8 @@ function mod.clickAction(action, release)
    end
    if action.page then
       mod.setAndPushToHistory(action.page)
-   elseif action == getSelectedAction() then
-      makeActionPopup()
    end
+   mod.getActionData(action).press(action)
    if action.press then
       action.press()
    end

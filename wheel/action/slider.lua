@@ -14,10 +14,12 @@ local api = {}
 ---@field range Vector2
 ---@field rangeY Vector2
 ---@field step number
+---@field loop boolean
 ---@field bgTexture Texture?
 ---@field bgMatrix Matrix3?
 ---@field backgroundSize Vector2
 ---@field bgRenderType ModelPart.renderType|string?
+---@field valueChange (fun(value: number, valueY: number))?
 local methods = {}
 api.methods = methods
 
@@ -80,7 +82,7 @@ local function unmapSliderValue(value, range, fallback, offset, step)
    if step ~= 0 then
       v = math.round(v * scale / step) / scale * step
    end
-   return math.clamp(v, 0, 1)
+   return v
 end
 
 ---@param action auria.wheel.action.slider
@@ -94,10 +96,14 @@ local function getUnmappedSliderPos(action, popup, mousePos)
    local value = popup.data.lastValue
    local fallback = action.bgTexture and 0.5 or 1
    local step = action.step
-   return vec(
+   local values = vec(
       unmapSliderValue(value.x, action.range, fallback, offset.x, step),
       unmapSliderValue(value.y, action.rangeY, fallback, offset.y, step)
    )
+   if action.loop then
+      return values % 1
+   end
+   return vec(math.clamp(values.x, 0, 1), math.clamp(values.y, 0, 1))
 end
 
 ---@param n number
@@ -126,10 +132,16 @@ end
 
 ---@param action auria.wheel.action.slider
 ---@param popup auria.wheel.action_popup
+local function updateSliderValues(action, popup)
+   action.value = math.lerp(action.range.x, action.range.y, popup.data.pos.x)
+   action.valueY = math.lerp(action.rangeY.x, action.rangeY.y, popup.data.pos.y)
+end
+
+---@param action auria.wheel.action.slider
+---@param popup auria.wheel.action_popup
 function api.popupClosed(action, popup)
    if popup.data.pos then
-      action.value = math.lerp(action.range.x, action.range.y, popup.data.pos.x)
-      action.valueY = math.lerp(action.rangeY.x, action.rangeY.y, popup.data.pos.y)
+      updateSliderValues(action, popup)
       popup.data.pos = nil
    end
    popup.data.mouseStart = nil
@@ -143,6 +155,10 @@ function api.popupRender(action, popup, delta)
    local newPos = getUnmappedSliderPos(action, popup, wheel.getMousePos())
    if popup.data.pos == newPos then return end
    popup.data.pos = newPos
+   if action.valueChange then
+      updateSliderValues(action, popup)
+      action.valueChange(action.value, action.valueY)
+   end
    local pos = popup.data.pos
    local tex = action.bgTexture
    if not tex then
@@ -162,6 +178,7 @@ function Page:newSlider()
    slider.range = vec(0, 1)
    slider.rangeY = vec(0, 0)
    slider.step = 0
+   slider.loop = false
    return slider
 end
 
@@ -203,6 +220,36 @@ end
 ---@return auria.wheel.action.slider
 function methods:setStep(step)
    self.step = step
+   return self
+end
+
+---sets function which will be called when slider value changes
+---@param func? fun(value: number, valueY: number)
+---@return auria.wheel.action.slider
+function methods:onValueChange(func)
+   self.valueChange = func
+   return self
+end
+
+---sets value of this slider
+---@param value? number
+---@param valueY? number
+---@return auria.wheel.action.slider
+function methods:setValue(value, valueY)
+   if value then
+      self.value = value
+   end
+   if valueY then
+      self.valueY = valueY
+   end
+   return self
+end
+
+---makes slider loop instead of clamp
+---@param loop any
+---@return auria.wheel.action.slider
+function methods:setLoop(loop)
+   self.loop = loop
    return self
 end
 

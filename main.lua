@@ -21,8 +21,12 @@ for k = 1, 4 do
       btn = page:newSlider()
    elseif k == 2 then
       btn = page:newSlider()
-         :setRange(vec(3, 2), vec(3, 2))
+      btn:setRange(vec(2, 1), vec(2, 1))
          :setBackgroundSize(vec(64, 64))
+         :setStep(0.25)
+         :onRelease(function()
+            host:setActionbar(tostring(vec(btn.value, btn.valueY)))
+         end)
    else
       btn = page:newAction()
    end

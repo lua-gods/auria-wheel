@@ -13,6 +13,7 @@ local api = {}
 ---@field valueY number
 ---@field range Vector2
 ---@field rangeY Vector2
+---@field step number
 ---@field bgTexture Texture?
 ---@field bgMatrix Matrix3?
 ---@field backgroundSize Vector2
@@ -28,9 +29,7 @@ hueUVMatrix:scale(6, 0, 1)
 ---@param popup auria.wheel.action_popup
 function api.createPopup(action, popup)
    popup.data = {
-      pos = vec(0, 0),
       lastValue = vec(0, 0),
-      mouseStart = vec(0, 0),
    }
    -- model
    local model = popup.model
@@ -65,16 +64,23 @@ function api.press(action)
    wheel.makeActionPopup(action)
 end
 
----@param v number
+---@param value number
 ---@param range Vector2
 ---@param fallback number
 ---@param offset number
+---@param step number
 ---@return number
-local function unmapRangeWithOffset(v, range, fallback, offset)
+local function unmapSliderValue(value, range, fallback, offset, step)
    if range.x == range.y then
       return fallback
    end
-   return (v - range.x) / (range.y - range.x) + offset
+   local scale = (range.y - range.x)
+   local v = (value - range.x) / scale
+   v = v + offset
+   if step ~= 0 then
+      v = math.round(v * scale / step) / scale * step
+   end
+   return math.clamp(v, 0, 1)
 end
 
 ---@param action auria.wheel.action.slider
@@ -87,16 +93,27 @@ local function getUnmappedSliderPos(action, popup, mousePos)
    offset.y = -offset.y
    local value = popup.data.lastValue
    local fallback = action.bgTexture and 0.5 or 1
+   local step = action.step
    return vec(
-      math.clamp(unmapRangeWithOffset(value.x, action.range, fallback, offset.x), 0, 1),
-      math.clamp(unmapRangeWithOffset(value.y, action.rangeY, fallback, offset.y), 0, 1)
+      unmapSliderValue(value.x, action.range, fallback, offset.x, step),
+      unmapSliderValue(value.y, action.rangeY, fallback, offset.y, step)
+   )
+end
+
+---@param n number
+---@param range Vector2
+local function clampValueWithRange(n, range)
+   return math.clamp(
+      n,
+      math.min(range.x, range.y),
+      math.max(range.x, range.y)
    )
 end
 
 ---@param action auria.wheel.action.slider
 local function clampSliderValues(action)
-   action.value = math.clamp(action.value, action.range.x, action.range.y)
-   action.valueY = math.clamp(action.valueY, action.rangeY.x, action.rangeY.y)
+   action.value = clampValueWithRange(action.value, action.range)
+   action.valueY = clampValueWithRange(action.valueY, action.rangeY)
 end
 
 ---@param action auria.wheel.action.slider
@@ -105,14 +122,16 @@ function api.popupOpened(action, popup)
    clampSliderValues(action)
    popup.data.lastValue = vec(action.value, action.valueY)
    popup.data.mouseStart = wheel.getMousePos()
-   popup.data.pos = getUnmappedSliderPos(action, popup, popup.data.mouseStart)
 end
 
 ---@param action auria.wheel.action.slider
 ---@param popup auria.wheel.action_popup
 function api.popupClosed(action, popup)
-   action.value = math.lerp(action.range.x, action.range.y, popup.data.pos.x)
-   action.valueY = math.lerp(action.rangeY.x, action.rangeY.y, popup.data.pos.y)
+   if popup.data.pos then
+      action.value = math.lerp(action.range.x, action.range.y, popup.data.pos.x)
+      action.valueY = math.lerp(action.rangeY.x, action.rangeY.y, popup.data.pos.y)
+      popup.data.pos = nil
+   end
    popup.data.mouseStart = nil
 end
 
@@ -121,7 +140,9 @@ end
 ---@param delta number
 function api.popupRender(action, popup, delta)
    if not popup.data.mouseStart then return end
-   popup.data.pos = getUnmappedSliderPos(action, popup, wheel.getMousePos())
+   local newPos = getUnmappedSliderPos(action, popup, wheel.getMousePos())
+   if popup.data.pos == newPos then return end
+   popup.data.pos = newPos
    local pos = popup.data.pos
    local tex = action.bgTexture
    if not tex then
@@ -140,6 +161,7 @@ function Page:newSlider()
    slider.backgroundSize = defaultBgSize
    slider.range = vec(0, 1)
    slider.rangeY = vec(0, 0)
+   slider.step = 0
    return slider
 end
 
@@ -173,6 +195,14 @@ end
 function methods:setRange(range, rangeY)
    self.range = range
    self.rangeY = rangeY or vec(0, 0)
+   return self
+end
+
+---sets spacing between values in slider
+---@param step number
+---@return auria.wheel.action.slider
+function methods:setStep(step)
+   self.step = step
    return self
 end
 

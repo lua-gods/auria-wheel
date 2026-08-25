@@ -156,6 +156,16 @@ function Action:setIconItem(item, displayMode)
    return self
 end
 
+---@param func function
+function Action:onPress(func)
+   self.press = func
+end
+
+---@param func function
+function Action:onRelease(func)
+   self.release = func
+end
+
 ---makes action with specified type
 ---@param myType string
 ---@param page? auria.wheel.page

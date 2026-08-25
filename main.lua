@@ -8,6 +8,7 @@ do
       :setIconEmoji(":cat:")
    slider:setBackground(wheel.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
       :setBackgroundSize(vec(128, 128))
+      :setRange(vec(0, 1), vec(0, 1))
 end
 do
    local slider = page:newSlider()
@@ -18,6 +19,10 @@ for k = 1, 4 do
    local btn
    if k == 3 then
       btn = page:newSlider()
+   elseif k == 2 then
+      btn = page:newSlider()
+         :setRange(vec(3, 2), vec(3, 2))
+         :setBackgroundSize(vec(64, 64))
    else
       btn = page:newAction()
    end

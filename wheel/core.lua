@@ -99,7 +99,8 @@ function Page:rebuildActions()
    end
 end
 
-local function getMousePos()
+---@return Vector2
+function mod.getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
 end
 
@@ -187,8 +188,12 @@ end
 ---@alias auria.wheel.action_data {
 ---methods: {[string]: function},
 ---mt: table,
----makePopup: (fun(action: auria.wheel.action, model: ModelPart)),
+---createPopup: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---press: (fun(action: auria.wheel.action)),
+---popupOpened: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
+---popupClosed: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
+---popupTick: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
+---popupRender: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup, delta: number)),
 ---}
 
 ---@param myType string
@@ -228,7 +233,7 @@ local function getActionsRotScaleAndOffset(count)
 end
 
 ---@returns auria.wheel.action?
-local function getSelectedAction()
+function mod.getSelectedAction()
    return selectedActionPage and selectedActionPage.actions[selectedActionidx] or nil
 end
 
@@ -294,20 +299,30 @@ function mod.makeActionPopup(action)
    local pageData = getRenderPage(selectedActionPage)
    local actionData = pageData.actions[selectedActionidx]
    if not actionData then return end
-   if actionData.popup then return actionData.popup end
    local actionTypeData = mod.getActionData(action)
-   if not actionTypeData.makePopup then
+   if not actionTypeData.createPopup then
       return
    end
-   local model = pageData.model:newPart("")
-   actionTypeData.makePopup(action, model)
-   ---@class auria.wheel.action_popup
-   actionData.popup = {
-      model = model,
-      visible = 0,
-      oldVisible = 0,
-   }
-   return actionData.popup
+   if not actionData.popup then
+      local model = pageData.model:newPart("")
+      ---@class auria.wheel.action_popup
+      actionData.popup = {
+         model = model,
+         visible = 0,
+         oldVisible = 0,
+         isOpen = false,
+         data = {},
+      }
+      actionTypeData.createPopup(action, actionData.popup)
+   end
+   local popup = actionData.popup
+   if not popup.isOpen then
+      popup.isOpen = true
+      if actionTypeData.popupOpened then
+         actionTypeData.popupOpened(action, actionData.popup)
+      end
+   end
+   return popup
 end
 
 ---@param action auria.wheel.action
@@ -351,7 +366,7 @@ function events.tick()
    local isClicked = leftClickKey:isPressed()
    if not isEnabled then
       if isClicked and selectedActionPage then
-         mod.clickAction(getSelectedAction(), true)
+         mod.clickAction(mod.getSelectedAction(), true)
       end
       selectedActionidx = -1
       selectedActionPage = nil
@@ -359,7 +374,7 @@ function events.tick()
       selectedActionidx = -1
       selectedActionPage = nil
       if currentPage and isEnabled then
-         local mousePos = getMousePos()
+         local mousePos = mod.getMousePos()
          getRenderPage(currentPage)
          local actionCount = #currentPage.actions
          local angle = math.atan2(mousePos.x, -mousePos.y)
@@ -372,7 +387,7 @@ function events.tick()
    end
    -- preview
    local previewPage
-   local selectedAction = getSelectedAction()
+   local selectedAction = mod.getSelectedAction()
    if selectedAction and selectedActionPage == currentPage then
       previewPage = selectedAction.page
       if previewPage then
@@ -397,6 +412,7 @@ function events.tick()
       data.scale = math.lerp(data.scale, target, 0.5)
       for i, actionData in pairs(data.actions) do
          local action = page.actions[i]
+         local typeData = mod.getActionData(action)
          local popup = actionData.popup
          local myTarget = 1.5
          if action == selectedAction then
@@ -417,6 +433,16 @@ function events.tick()
             if popup.visible < 0.0001 then
                popup.model:remove()
                actionData.popup = nil
+               popupTarget = 0
+            end
+            if typeData.popupTick then
+               typeData.popupTick(action, popup)
+            end
+            if popupTarget == 0 and popup.isOpen then
+               popup.isOpen = false
+               if typeData.popupClosed then
+                  typeData.popupClosed(action, popup)
+               end
             end
          end
       end
@@ -429,7 +455,7 @@ end
 
 leftClickKey.press = function()
    if not isEnabled then return end
-   local action = getSelectedAction()
+   local action = mod.getSelectedAction()
    if action then
       mod.clickAction(action)
    end
@@ -437,7 +463,7 @@ leftClickKey.press = function()
 end
 leftClickKey.release = function()
    if not isEnabled then return end
-   local action = getSelectedAction()
+   local action = mod.getSelectedAction()
    if action then
       mod.clickAction(action, true)
    end
@@ -511,6 +537,11 @@ local function renderPage(page, delta, globalVisible)
          popup.model:setScale(myVisible)
             :setPos(pos - vec(0, 0, 50))
             :setOpacity(myVisible)
+
+         local typeData = mod.getActionData(action)
+         if typeData.popupRender then
+            typeData.popupRender(action, popup, delta)
+         end
       end
    end
 end

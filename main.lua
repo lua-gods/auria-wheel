@@ -17,6 +17,7 @@ do
       :setLoop(true)
    slider:setBackground(wheel.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
 end
+page:newToggle()
 for k = 1, 4 do
    local btn
    if k == 3 then
@@ -39,6 +40,7 @@ for k = 1, 4 do
       local page2 = wheel.newPage()
       for a = 1, 8 do
          local btn2 = page2:newAction()
+         -- local btn2 = page2:newToggle()
          if (k == 1 and a == 2) or (k == 4 and a == 8) then
             local page3 = wheel.newPage()
             for _ = 1, 5 do

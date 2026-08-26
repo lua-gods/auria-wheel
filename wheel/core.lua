@@ -4,6 +4,8 @@ local mod = {}
 mod.blurPostEffect = "blur"
 local blurApplied = nil
 
+mod.lib = {}
+
 ---@class auria.wheel.page
 local Page = {}
 Page.__index = Page
@@ -100,7 +102,7 @@ function Page:rebuildActions()
 end
 
 ---@return Vector2
-function mod.getMousePos()
+function mod.lib.getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
 end
 
@@ -202,14 +204,19 @@ end
 ---press: (fun(action: auria.wheel.action)),
 ---popupOpened: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---popupClosed: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
----popupTick: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
----popupRender: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup, delta: number)),
+---actionTick: (fun(action: auria.wheel.action, data: auria.wheel.action.render)),
+---actionRender: (fun(action: auria.wheel.action, data: auria.wheel.action.render, delta: number)),
+---createRenderData: (fun(action: auria.wheel.action, data: auria.wheel.action.render)),
 ---}
 
 ---@param myType string
 ---@param data auria.wheel.action_data
 function mod.newActionType(myType, data)
-   data.press = data.press or function() end
+   local emptyFunc = function() end
+   data.press = data.press or emptyFunc
+   data.actionTick = data.actionTick or emptyFunc
+   data.actionRender = data.actionRender or emptyFunc
+   data.createRenderData = data.createRenderData or emptyFunc
    -- add built in methods
    data.methods = data.methods or {}
    local methods = data.methods
@@ -384,7 +391,7 @@ function events.tick()
       selectedActionidx = -1
       selectedActionPage = nil
       if currentPage and isEnabled then
-         local mousePos = mod.getMousePos()
+         local mousePos = mod.lib.getMousePos()
          getRenderPage(currentPage)
          local actionCount = #currentPage.actions
          local angle = math.atan2(mousePos.x, -mousePos.y)
@@ -433,6 +440,7 @@ function events.tick()
          end
          actionData.oldScale = actionData.scale
          actionData.scale = math.lerp(actionData.scale, myTarget, 0.5)
+         typeData.actionTick(action, actionData)
          if popup then
             local popupTarget = 0
             if action == selectedAction and isClicked then
@@ -444,9 +452,6 @@ function events.tick()
                popup.model:remove()
                actionData.popup = nil
                popupTarget = 0
-            end
-            if typeData.popupTick then
-               typeData.popupTick(action, popup)
             end
             if popupTarget == 0 and popup.isOpen then
                popup.isOpen = false
@@ -501,20 +506,26 @@ local function renderPage(page, delta, globalVisible)
       for i, action in ipairs(page.actions) do
          local model = data.model:newPart("")
          model:addChild(action.icon)
-         local textTask = model:newText("title")
+         local textGroup = model:newPart("text")
+         local textTask = textGroup:newText("title")
          ---@class auria.wheel.action.render
-         data.actions[i] = {
+         local myData = {
             model = model,
             scale = 0,
             oldScale = 0,
             text = textTask,
             ---@type auria.wheel.action_popup?
             popup = nil,
+            data = {},
          }
-         textTask:setText(action.title)
-            :setPos(0, -12, 0)
-            :setAlignment("CENTER")
+         data.actions[i] = myData
+         textGroup:setPos(0, -12, 0)
             :setScale(1 / 1.5)
+         textTask:setText(action.title)
+            :setAlignment("CENTER")
+
+         local typeData = mod.getActionData(action)
+         typeData.createRenderData(action, myData)
       end
    end
    local opacity = 1 - math.abs(visible - 1)
@@ -547,12 +558,9 @@ local function renderPage(page, delta, globalVisible)
          popup.model:setScale(myVisible)
             :setPos(pos - vec(0, 0, 50))
             :setOpacity(myVisible)
-
-         local typeData = mod.getActionData(action)
-         if typeData.popupRender then
-            typeData.popupRender(action, popup, delta)
-         end
       end
+      local typeData = mod.getActionData(action)
+      typeData.actionRender(action, actionData, delta)
    end
 end
 

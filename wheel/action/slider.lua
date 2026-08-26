@@ -127,7 +127,7 @@ end
 function api.popupOpened(action, popup)
    clampSliderValues(action)
    popup.data.lastValue = vec(action.value, action.valueY)
-   popup.data.mouseStart = wheel.getMousePos()
+   popup.data.mouseStart = wheel.lib.getMousePos()
 end
 
 ---@param action auria.wheel.action.slider
@@ -148,11 +148,13 @@ function api.popupClosed(action, popup)
 end
 
 ---@param action auria.wheel.action.slider
----@param popup auria.wheel.action_popup
+---@param data auria.wheel.action.render
 ---@param delta number
-function api.popupRender(action, popup, delta)
+function api.actionRender(action, data, delta)
+   local popup = data.popup
+   if not popup then return end
    if not popup.data.mouseStart then return end
-   local newPos = getUnmappedSliderPos(action, popup, wheel.getMousePos())
+   local newPos = getUnmappedSliderPos(action, popup, wheel.lib.getMousePos())
    if popup.data.pos == newPos then return end
    popup.data.pos = newPos
    if action.valueChange then

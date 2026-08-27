@@ -65,6 +65,7 @@ for k = 1, 4 do
             :setTitle(a.." actions")
          for b = 1, a do
             page3:newToggle()
+               :setTitle("action: "..b)
          end
       end
    end

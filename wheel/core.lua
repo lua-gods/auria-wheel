@@ -4,6 +4,11 @@ local mod = {}
 mod.blurPostEffect = "blur"
 local blurApplied = nil
 
+local pageAngleOffsets = {
+   [1] = math.rad(-90),
+   [3] = math.rad(30),
+}
+
 mod.lib = {}
 
 ---@class auria.wheel.page
@@ -277,7 +282,7 @@ end
 
 local function getActionsRotScaleAndOffset(count)
    local rotScale = math.pi * 2 / count
-   return rotScale, -rotScale / 2
+   return rotScale, -rotScale / 2 + (pageAngleOffsets[count] or 0)
 end
 
 ---@returns auria.wheel.action?
@@ -424,12 +429,18 @@ function events.tick()
       if currentPage and isEnabled then
          local mousePos = mod.lib.getMousePos()
          getRenderPage(currentPage)
-         local actionCount = #currentPage.actions
-         local angle = math.atan2(mousePos.x, -mousePos.y)
          local dist = mousePos:length()
          if dist > 50 then
-            selectedActionidx = math.floor(((angle / math.pi / 2) % 1) * actionCount) + 1
-            selectedActionPage = currentPage
+            local actionCount = #currentPage.actions
+            local angle = math.atan2(mousePos.x, -mousePos.y) - (pageAngleOffsets[actionCount] or 0)
+            local i = ((angle / math.pi / 2) % 1) * actionCount
+            local center = math.floor(i) + 0.5
+            local diff = math.abs(center - i) / actionCount * 360
+            local idx = math.floor(i + 1)
+            if diff < 70 and currentPage.actions[idx] then
+               selectedActionidx = idx
+               selectedActionPage = currentPage
+            end
          end
       end
    end

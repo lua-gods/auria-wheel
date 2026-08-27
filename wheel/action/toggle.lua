@@ -6,11 +6,12 @@ local Page = wheel.page
 local api = {}
 
 ---@class auria.wheel.action.toggle : auria.wheel.action
+---@field value boolean
 ---@field toggleFunc (fun(value: boolean))?
 local methods = {}
 api.methods = methods
 
----@param action auria.wheel.action
+---@param action auria.wheel.action.toggle
 ---@param data auria.wheel.action.render
 function api.createRenderData(action, data)
    local model = data.model
@@ -24,9 +25,12 @@ function api.createRenderData(action, data)
    toggle:setPos(offset, 0, 0)
    model.text:addChild(bg):addChild(toggle)
 
+   local pos = action.value and 1 or 0
    data.data = {
-      pos = 0,
-      oldPos = 0,
+      pos = pos,
+      oldPos = pos,
+      vel = 0,
+      offset = offset,
    }
 end
 
@@ -38,15 +42,23 @@ function api.press(action)
    end
 end
 
+---@param action auria.wheel.action.toggle
+---@param data auria.wheel.action.render
 function api.actionTick(action, data)
    local myData = data.data
    myData.oldPos = myData.pos
+   local target = action.value and 1 or 0
+   myData.vel = myData.vel * 0.25 + (target - myData.pos) * 0.75
+   myData.pos = myData.pos + myData.vel
 end
 
 function api.actionRender(action, data, delta)
-   
+   local myData = data.data
+   local pos = math.lerp(myData.oldPos, myData.pos, delta)
+   data.model.text.toggle:setPos(myData.offset - pos * 4, 0)
 end
 
+---creates new action with toggle type
 ---@return auria.wheel.action.toggle
 function Page:newToggle()
    local action = wheel.newAction("toggle", self)
@@ -54,10 +66,19 @@ function Page:newToggle()
    return action
 end
 
+---sets function that will be run when this toggle is toggled
 ---@param func? (fun(value: boolean))
 ---@return auria.wheel.action.toggle
 function methods:onToggle(func)
    self.toggleFunc = func
+   return self
+end
+
+---sets this toggle's toggle state
+---@param value boolean
+---@return auria.wheel.action.toggle
+function methods:setToggled(value)
+   self.value = value
    return self
 end
 

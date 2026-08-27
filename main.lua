@@ -18,6 +18,9 @@ do
    slider:setBackground(wheel.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
 end
 page:newToggle()
+   :setTitle("Hello World")
+   :setIconEmoji(":fox:")
+   :setToggled(true)
 for k = 1, 4 do
    local btn
    if k == 3 then

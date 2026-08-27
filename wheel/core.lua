@@ -115,7 +115,8 @@ function Action:setIconEmoji(text)
    local task = model:newText("")
    task:setText(text)
       :scale(2)
-      :setPos(8, 8, 0)
+      :setAlignment("CENTER")
+      :setPos(0, 8, 0)
       :setLight(15, 15)
    self.icon = model
    self.iconRender = function(opacity)
@@ -158,14 +159,34 @@ function Action:setIconItem(item, displayMode)
    return self
 end
 
+---sets function that will be run when this action is pressed
+---@generic self
+---@param self self
 ---@param func function
+---@return self
 function Action:onPress(func)
    self.press = func
+   return self
 end
 
+---sets function that will be run when this action is released
+---@generic self
+---@param self self
 ---@param func function
+---@return self
 function Action:onRelease(func)
    self.release = func
+   return self
+end
+
+---sets title of this action
+---@generic self
+---@param self self
+---@param text string
+---@return self
+function Action:setTitle(text)
+   self.title = text
+   return self
 end
 
 ---makes action with specified type
@@ -435,7 +456,7 @@ function events.tick()
          if action == selectedAction then
             myTarget = 2
             if isClicked and not popup then
-               myTarget = 1.75
+               myTarget = 1.9
             end
          end
          actionData.oldScale = actionData.scale

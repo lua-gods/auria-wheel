@@ -189,6 +189,16 @@ function Action:setTitle(text)
    return self
 end
 
+---sets page that will be opened when this action is clicked
+---@generic self
+---@param self self
+---@param page auria.wheel.page
+---@return self
+function Action:setPage(page)
+   self.page = page
+   return self
+end
+
 ---makes action with specified type
 ---@param myType string
 ---@param page? auria.wheel.page

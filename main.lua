@@ -39,23 +39,34 @@ for k = 1, 4 do
    else
       btn = page:newAction()
    end
-   if k == 1 or k == 4 then
+   if k == 4 then
       local page2 = wheel.newPage()
       for a = 1, 8 do
          local btn2 = page2:newAction()
-         -- local btn2 = page2:newToggle()
-         if (k == 1 and a == 2) or (k == 4 and a == 8) then
+         if a == 8 then
             local page3 = wheel.newPage()
             for _ = 1, 5 do
                page3:newAction()
             end
-            btn2.page = page3
+            btn2:setPage(page3)
             if k == 1 then
                btn2:setIconEmoji(":@auria:")
             end
          end
       end
-      btn.page = page2
+      btn:setPage(page2)
+   elseif k == 1 then
+      local page2 = wheel.newPage()
+      btn:setPage(page2)
+      for a = 1, 10 do
+         local page3 = wheel.newPage()
+         page2:newAction()
+            :setPage(page3)
+            :setTitle(a.." actions")
+         for b = 1, a do
+            page3:newToggle()
+         end
+      end
    end
    if k == 1 then
       btn:setIconEmoji(":dragon:")

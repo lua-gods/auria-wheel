@@ -60,8 +60,8 @@ hudOverlay:setTexture(mod.lib.texture, myTextureSize:unpack())
    :setRegion(1, 1)
 
 
-local leftClickKey = keybinds:of("Left click", "key.mouse.left")
-local RightClickKey = keybinds:of("Right click", "key.mouse.right")
+local leftClickKey = keybinds:of("wheel - Left click", "key.mouse.left")
+local RightClickKey = keybinds:of("wheel - Right click", "key.mouse.right")
 
 ---@type {[string]: auria.wheel.action_data}
 local actionTypes = {}
@@ -85,10 +85,12 @@ function mod.isEnabled()
    return isEnabled
 end
 
+local f3Key = keybinds:newKeybind('wheel - f3', 'key.keyboard.f3')
 do
    local toggleMode = false
    local lastClick = -1
    mod.conf.keybind.press = function()
+      if f3Key:isPressed() then return end
       if toggleMode and isEnabled then
          mod.setEnabled(false)
          toggleMode = false

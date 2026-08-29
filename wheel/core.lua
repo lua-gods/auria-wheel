@@ -1,16 +1,9 @@
 ---@class auria.wheel
 local mod = {}
 
-mod.blurPostEffect = "blur"
-local blurApplied = nil
-
-local pageAngleOffsets = {
-   [1] = math.rad(-90),
-   [3] = math.rad(30),
-}
-
+---@type auria.wheel.config
+mod.conf = require("./conf")
 mod.lib = {}
-
 ---@class auria.wheel.page
 local Page = {}
 Page.__index = Page
@@ -65,24 +58,62 @@ local overlayColor = vec(0.2, 0.22, 0.25)
 hudOverlay:setTexture(mod.texture, myTextureSize:unpack())
    :setRegion(1, 1)
 
-local keybind = keybinds:fromVanilla("figura.config.action_wheel_button")
--- local keybind = keybinds:of("Open wheel", "key.keyboard.v")
-keybind.press = function()
-   isEnabled = true
-   host:setUnlockCursor(true)
-   return true
-end
-keybind.release = function()
-   if isEnabled then
-      host:setUnlockCursor(false)
-   end
-   isEnabled = false
-end
+
 local leftClickKey = keybinds:of("Left click", "key.mouse.left")
 local RightClickKey = keybinds:of("Right click", "key.mouse.right")
 
 ---@type {[string]: auria.wheel.action_data}
 local actionTypes = {}
+
+local blurApplied = nil
+
+local pageAngleOffsets = {
+   [1] = math.rad(-90),
+   [3] = math.rad(30),
+}
+
+function mod.setEnabled(state)
+   if state == isEnabled then
+      return
+   end
+   isEnabled = state
+   host:setUnlockCursor(state)
+end
+
+function mod.isEnabled()
+   return isEnabled
+end
+
+do
+   local toggleMode = false
+   local lastClick = -1
+   mod.conf.keybind.press = function()
+      if toggleMode and isEnabled then
+         mod.setEnabled(false)
+         toggleMode = false
+         return true
+      end
+      mod.setEnabled(true)
+      lastClick = client.getSystemTime()
+      return true
+   end
+   mod.conf.keybind.release = function()
+      if mod.conf.mode == "HOLD" then
+         mod.setEnabled(false)
+         return
+      elseif mod.conf.mode == "TOGGLE" then
+         toggleMode = true
+         return
+      end
+      -- mixed
+      local diff = client.getSystemTime() - lastClick
+      if diff >= mod.conf.holdTime then
+         mod.setEnabled(false)
+      else
+         toggleMode = true
+      end
+   end
+end
 
 ---@return auria.wheel.page
 function mod.newPage()
@@ -401,15 +432,19 @@ function events.tick()
    oldVisibleAnim = visibleAnim
    visibleAnim = math.lerp(visibleAnim, isEnabled and 1 or 0, 0.5)
    -- blur
-   local blurToApply = isEnabled and mod.blurPostEffect or nil
+   local blurToApply = isEnabled and mod.conf.postEffect or nil
    if blurApplied ~= blurToApply then
       blurApplied = blurToApply
       if not pcall(renderer.setPostEffect, renderer, blurToApply) then
-         mod.blurPostEffect = nil
+         mod.conf.postEffect = nil
          if blurToApply then
             pcall(renderer.setPostEffect, renderer)
          end
       end
+   end
+   -- disable in gui
+   if isEnabled and mod.conf.mode ~= "HOLD" and host:getScreen() then
+      mod.setEnabled(false)
    end
    -- skip updating pages when closed
    if (oldVisibleAnim + visibleAnim < 0.05) and not isEnabled then

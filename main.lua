@@ -3,24 +3,11 @@ local wheel = require("wheel.main")
 local page = wheel.newPage()
 wheel.setPage(page)
 
-do
-   local slider = page:newSlider()
-      :setIconEmoji(":cat:")
-   slider:setBackground(wheel.lib.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
-      :setBackgroundSize(vec(128, 128))
-      :setRange(vec(0, 1), vec(0, 1))
-      :setValue(0.5, 0.75)
-end
-do
-   local slider = page:newSlider()
-      :setIconEmoji(":cat:")
-      :setLoop(true)
-   slider:setBackground(wheel.lib.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
-end
 page:newToggle()
    :setTitle("Hello World")
    :setIconEmoji(":fox:")
    :setToggled(true)
+page:newColorPicker()
 for k = 1, 4 do
    local btn
    if k == 3 then

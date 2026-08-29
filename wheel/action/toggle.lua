@@ -58,7 +58,7 @@ function api.actionRender(action, data, delta)
    data.model.text.toggle:setPos(myData.offset - pos * 4, 0)
 end
 
----creates new action with toggle type
+---creates new toggle
 ---@return auria.wheel.action.toggle
 function Page:newToggle()
    local action = wheel.newAction("toggle", self)

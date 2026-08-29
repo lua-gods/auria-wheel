@@ -171,6 +171,7 @@ function api.actionRender(action, data, delta)
    popup.model.indicator:setPos(modelPos:augmented(0))
 end
 
+---creates new slider
 ---@return auria.wheel.action.slider
 function Page:newSlider()
    local slider = wheel.newAction("slider", self)
@@ -184,6 +185,7 @@ function Page:newSlider()
    return slider
 end
 
+---sets background of slider
 ---@param texture Texture
 ---@param pos Vector2
 ---@param size Vector2
@@ -200,6 +202,7 @@ function methods:setBackground(texture, pos, size, renderType)
    return self
 end
 
+---sets size of this slider
 ---@param size Vector2?
 ---@return auria.wheel.action.slider
 function methods:setBackgroundSize(size)

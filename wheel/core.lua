@@ -3,11 +3,12 @@ local mod = {}
 
 ---@type auria.wheel.config
 mod.conf = require("./conf")
+--extra variables and functions used for extending wheel features like custom action types
 mod.lib = {}
 ---@class auria.wheel.page
 local Page = {}
 Page.__index = Page
-mod.page = Page
+mod.lib.page = Page
 
 ---@class auria.wheel.action
 local Action = {}
@@ -27,15 +28,15 @@ do
    model:remove()
    ---@type ModelPart
    model = model.model
-   mod.models = model -- main models used by library
-   for _, v in pairs(mod.models:getChildren()) do
+   mod.lib.models = model -- main models used by library
+   for _, v in pairs(mod.lib.models:getChildren()) do
       v:setLight(15, 15)
    end
 end
 
 ---@type Texture # main texture used by library
-mod.texture = textures[(...):gsub(".$", "%1."):gsub("/", ".").."texture"]
-local myTextureSize = mod.texture:getDimensions()
+mod.lib.texture = textures[(...):gsub(".$", "%1."):gsub("/", ".").."texture"]
+local myTextureSize = mod.lib.texture:getDimensions()
 
 ---@type auria.wheel.page?
 local currentPage = nil
@@ -55,7 +56,7 @@ local oldVisibleAnim, visibleAnim = 0, 0
 
 local hudOverlay = hudModel:newSprite("overlay")
 local overlayColor = vec(0.2, 0.22, 0.25)
-hudOverlay:setTexture(mod.texture, myTextureSize:unpack())
+hudOverlay:setTexture(mod.lib.texture, myTextureSize:unpack())
    :setRegion(1, 1)
 
 
@@ -168,7 +169,7 @@ end
 ---@param size Vector2
 ---@return self
 function Action:setIconTexture(texture, pos, size)
-   local model = mod.models.icon:copy("")
+   local model = mod.lib.models.icon:copy("")
    model:setPrimaryTexture("CUSTOM", texture)
    local texSize = texture:getDimensions()
    local mat = matrices.mat3()
@@ -278,7 +279,7 @@ end
 
 ---@param myType string
 ---@param data auria.wheel.action_data
-function mod.newActionType(myType, data)
+function mod.lib.newActionType(myType, data)
    local emptyFunc = function() end
    data.press = data.press or emptyFunc
    data.actionTick = data.actionTick or emptyFunc
@@ -300,11 +301,11 @@ end
 
 ---@param action auria.wheel.action
 ---@return auria.wheel.action_data
-function mod.getActionData(action)
+function mod.lib.getActionData(action)
    return actionTypes[action.type]
 end
 
-mod.newActionType("normal", {})
+mod.lib.newActionType("normal", {})
 
 ---@return auria.wheel.action
 function Page:newAction()
@@ -379,11 +380,11 @@ end
 ---creates popup for action
 ---@param action auria.wheel.action
 ---@return auria.wheel.action_popup?
-function mod.makeActionPopup(action)
+function mod.lib.makeActionPopup(action)
    local pageData = getRenderPage(selectedActionPage)
    local actionData = pageData.actions[selectedActionidx]
    if not actionData then return end
-   local actionTypeData = mod.getActionData(action)
+   local actionTypeData = mod.lib.getActionData(action)
    if not actionTypeData.createPopup then
       return
    end
@@ -421,7 +422,7 @@ function mod.clickAction(action, release)
    if action.page then
       mod.setAndPushToHistory(action.page)
    end
-   mod.getActionData(action).press(action)
+   mod.lib.getActionData(action).press(action)
    if action.press then
       action.press()
    end
@@ -506,7 +507,7 @@ function events.tick()
       data.scale = math.lerp(data.scale, target, 0.5)
       for i, actionData in pairs(data.actions) do
          local action = page.actions[i]
-         local typeData = mod.getActionData(action)
+         local typeData = mod.lib.getActionData(action)
          local popup = actionData.popup
          local myTarget = 1.5
          if action == selectedAction then
@@ -601,7 +602,7 @@ local function renderPage(page, delta, globalVisible)
          textTask:setText(action.title)
             :setAlignment("CENTER")
 
-         local typeData = mod.getActionData(action)
+         local typeData = mod.lib.getActionData(action)
          typeData.createRenderData(action, myData)
       end
    end
@@ -636,7 +637,7 @@ local function renderPage(page, delta, globalVisible)
             :setPos(pos - vec(0, 0, 50))
             :setOpacity(myVisible)
       end
-      local typeData = mod.getActionData(action)
+      local typeData = mod.lib.getActionData(action)
       typeData.actionRender(action, actionData, delta)
    end
 end

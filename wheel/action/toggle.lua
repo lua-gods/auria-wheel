@@ -1,6 +1,6 @@
 local wheel = require("../core") ---@class auria.wheel
 ---@class auria.wheel.page
-local Page = wheel.page
+local Page = wheel.lib.page
 
 ---@type auria.wheel.action_data
 local api = {}
@@ -19,8 +19,8 @@ function api.createRenderData(action, data)
    local width = 14
    textTask:setPos(width / 2, 0, 0)
    local offset = client.getTextWidth(textTask:getText() or "") * -0.5
-   local bg = wheel.models.toggle_bg:copy("")
-   local toggle = wheel.models.toggle:copy("toggle")
+   local bg = wheel.lib.models.toggle_bg:copy("")
+   local toggle = wheel.lib.models.toggle:copy("toggle")
    bg:setPos(offset, 0, 0)
    toggle:setPos(offset, 0, 0)
    model.text:addChild(bg):addChild(toggle)
@@ -82,4 +82,4 @@ function methods:setToggled(value)
    return self
 end
 
-wheel.newActionType("toggle", api)
+wheel.lib.newActionType("toggle", api)

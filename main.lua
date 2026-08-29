@@ -6,7 +6,7 @@ wheel.setPage(page)
 do
    local slider = page:newSlider()
       :setIconEmoji(":cat:")
-   slider:setBackground(wheel.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
+   slider:setBackground(wheel.lib.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
       :setBackgroundSize(vec(128, 128))
       :setRange(vec(0, 1), vec(0, 1))
       :setValue(0.5, 0.75)
@@ -15,7 +15,7 @@ do
    local slider = page:newSlider()
       :setIconEmoji(":cat:")
       :setLoop(true)
-   slider:setBackground(wheel.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
+   slider:setBackground(wheel.lib.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
 end
 page:newToggle()
    :setTitle("Hello World")

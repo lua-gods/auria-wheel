@@ -1,8 +1,8 @@
 local wheel = require("../core") ---@class auria.wheel
 ---@class auria.wheel.page
-local Page = wheel.page
+local Page = wheel.lib.page
 
-local myTextureSize = wheel.texture:getDimensions()
+local myTextureSize = wheel.lib.texture:getDimensions()
 local defaultBgSize = vec(96, 12)
 
 ---@type auria.wheel.action_data
@@ -35,14 +35,14 @@ function api.createPopup(action, popup)
    }
    -- model
    local model = popup.model
-   for _, v in pairs(wheel.models.slider:getChildren()) do
+   for _, v in pairs(wheel.lib.models.slider:getChildren()) do
       v:copy(v:getName())
          :light(15, 15)
          :moveTo(model)
    end
    local size = action.backgroundSize
    if action.bgTexture then
-      local bg = wheel.models.sprite:copy("bg")
+      local bg = wheel.lib.models.sprite:copy("bg")
       model:addChild(bg)
       bg:setPrimaryTexture("CUSTOM", action.bgTexture)
          :setUVMatrix(action.bgMatrix)
@@ -50,7 +50,7 @@ function api.createPopup(action, popup)
          bg:setPrimaryRenderType(action.bgRenderType)
       end
    else
-      model:addChild(wheel.models.slider_bg:copy("bg"))
+      model:addChild(wheel.lib.models.slider_bg:copy("bg"))
       model.indicator:setVisible(false)
    end
    local size2 = size:augmented(0)
@@ -63,7 +63,7 @@ function api.createPopup(action, popup)
 end
 
 function api.press(action)
-   wheel.makeActionPopup(action)
+   wheel.lib.makeActionPopup(action)
 end
 
 ---@param value number
@@ -255,4 +255,4 @@ function methods:setLoop(loop)
    return self
 end
 
-wheel.newActionType("slider", api)
+wheel.lib.newActionType("slider", api)

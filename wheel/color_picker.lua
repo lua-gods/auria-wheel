@@ -41,7 +41,26 @@ blueSlider:setTitle("Blue")
    :setIconTexture(wheel.lib.texture, vec(24, 16), vec(8, 8))
    :setBackground(wheel.lib.texture, vec(9.5, 3.5), vec(1, 0), "BLURRY")
 
+local presetsAction = page:newAction()
+presetsAction:setTitle("presets")
+   :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
+
+---@param color Vector3?
+---@return ModelPart
+local function makeColorIcon(color)
+   local og = wheel.lib.models.color_icon
+   local model = models:newPart(""):remove()
+   model:addChild(og.bg:copy("bg"))
+   model:addChild(og.outline:copy("outline"))
+   if color then
+      model.bg:setColor(color)
+   end
+   return model
+end
+
 local colorPreview = page:newAction()
+local previewIcon = makeColorIcon()
+colorPreview:setIconModel(previewIcon)
 
 local color = vec(1, 1, 1)
 local colorHsv = vec(0, 0, 1)
@@ -55,12 +74,12 @@ local function updateTexture()
    texColor = newColor
    local tex = wheel.lib.texture
    tex:setPixel(7, 0, vectors.hsvToRGB(colorHsv.x, 1, 1))
-      :setPixel(9 , 1, vec(0, color.g, color.b))
-      :setPixel(10, 1, vec(1, color.g, color.b))
-      :setPixel(9 , 2, vec(color.r, 0, color.b))
-      :setPixel(10, 2, vec(color.r, 1, color.b))
-      :setPixel(9 , 3, vec(color.r, color.g, 0))
-      :setPixel(10, 3, vec(color.r, color.g, 1))
+      :setPixel(9 , 1, 0, color.g, color.b)
+      :setPixel(10, 1, 1, color.g, color.b)
+      :setPixel(9 , 2, color.r, 0, color.b)
+      :setPixel(10, 2, color.r, 1, color.b)
+      :setPixel(9 , 3, color.r, color.g, 0)
+      :setPixel(10, 3, color.r, color.g, 1)
    tex:update()
 end
 
@@ -78,6 +97,7 @@ local function updateColor(fromHsv)
    blueSlider:setValue(color.b)
 
    colorPreview:setTitle("#"..vectors.rgbToHex(color):upper())
+   previewIcon.bg:setColor(color)
 end
 
 sliderColor:onValueChange(function(value, valueY)
@@ -106,6 +126,27 @@ blueSlider:onValueChange(function(value)
    updateColor()
 end):onPress(updateTexture)
 
+local presetsPage = wheel.newPage()
+presetsAction:setPage(presetsPage)
+
+local presetsColors = {
+   {"#88eeff", "blue"},
+   {"#ffaaee", "pink"},
+   {"#ffffff", "white"},
+}
+
+for _, v in ipairs(presetsColors) do
+   local action = presetsPage:newAction()
+   local myColor = vectors.hexToRGB(v[1])
+   action:setIconModel(makeColorIcon(myColor))
+      :setTitle(v[2])
+      :onPress(function()
+         wheel.previousPage()
+         color = myColor:copy()
+         updateColor()
+      end)
+end
+
 ---@param action auria.wheel.action.color_picker
 function api.press(action)
    color = action.color
@@ -120,7 +161,6 @@ function Page:newColorPicker()
    action.color = vec(1, 1, 1)
    action:setPage(page)
       :setTitle("Color")
-      -- :setIconEmoji(":palette:")
       :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
    return action
 end

@@ -209,6 +209,18 @@ function Action:setIconItem(item, displayMode)
    return self
 end
 
+---@generic self
+---@param self self
+---@param model ModelPart
+---@return self
+function Action:setIconModel(model)
+   ---@cast self auria.wheel.action
+   self.icon = model
+   self.iconRender = nil
+   self:updateModel()
+   return self
+end
+
 ---sets function that will be run when this action is pressed
 ---@generic self
 ---@param self self

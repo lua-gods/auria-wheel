@@ -62,67 +62,70 @@ local colorPreview = page:newAction()
 local previewIcon = makeColorIcon()
 colorPreview:setIconModel(previewIcon)
 
-local color = vec(1, 1, 1)
-local colorHsv = vec(0, 0, 1)
+local currentColor = vec(1, 1, 1)
+local currentColorHsv = vec(0, 0, 1)
 local texColor = ""
 
 local function updateTexture()
-   local newColor = vectors.rgbToHex(colorHsv)
+   local newColor = vectors.rgbToHex(currentColorHsv)
    if texColor == newColor then
       return
    end
    texColor = newColor
    local tex = wheel.lib.texture
-   tex:setPixel(7, 0, vectors.hsvToRGB(colorHsv.x, 1, 1))
-      :setPixel(9 , 1, 0, color.g, color.b)
-      :setPixel(10, 1, 1, color.g, color.b)
-      :setPixel(9 , 2, color.r, 0, color.b)
-      :setPixel(10, 2, color.r, 1, color.b)
-      :setPixel(9 , 3, color.r, color.g, 0)
-      :setPixel(10, 3, color.r, color.g, 1)
+   tex:setPixel(7, 0, vectors.hsvToRGB(currentColorHsv.x, 1, 1))
+      :setPixel(9 , 1, 0, currentColor.g, currentColor.b)
+      :setPixel(10, 1, 1, currentColor.g, currentColor.b)
+      :setPixel(9 , 2, currentColor.r, 0, currentColor.b)
+      :setPixel(10, 2, currentColor.r, 1, currentColor.b)
+      :setPixel(9 , 3, currentColor.r, currentColor.g, 0)
+      :setPixel(10, 3, currentColor.r, currentColor.g, 1)
    tex:update()
+end
+
+local function updatePreview()
+   colorPreview:setTitle("#"..vectors.rgbToHex(currentColor):upper())
+   previewIcon.bg:setColor(currentColor)
 end
 
 ---@param fromHsv boolean?
 local function updateColor(fromHsv)
    if fromHsv then
-      color = vectors.hsvToRGB(colorHsv)
+      currentColor = vectors.hsvToRGB(currentColorHsv)
    else
-      colorHsv = vectors.rgbToHSV(color)
+      currentColorHsv = vectors.rgbToHSV(currentColor)
    end
-   sliderColor:setValue(colorHsv.y, colorHsv.z)
-   hueSlider:setValue(colorHsv.x)
-   redSlider:setValue(color.r)
-   greenSlider:setValue(color.g)
-   blueSlider:setValue(color.b)
-
-   colorPreview:setTitle("#"..vectors.rgbToHex(color):upper())
-   previewIcon.bg:setColor(color)
+   sliderColor:setValue(currentColorHsv.y, currentColorHsv.z)
+   hueSlider:setValue(currentColorHsv.x)
+   redSlider:setValue(currentColor.r)
+   greenSlider:setValue(currentColor.g)
+   blueSlider:setValue(currentColor.b)
+   updatePreview()
 end
 
 sliderColor:onValueChange(function(value, valueY)
-   colorHsv.y = value
-   colorHsv.z = valueY
+   currentColorHsv.y = value
+   currentColorHsv.z = valueY
    updateColor(true)
 end):onPress(updateTexture)
 
 hueSlider:onValueChange(function(value)
-   colorHsv.x = value
+   currentColorHsv.x = value
    updateColor(true)
 end)
 
 redSlider:onValueChange(function(value)
-   color.r = value
+   currentColor.r = value
    updateColor()
 end):onPress(updateTexture)
 
 greenSlider:onValueChange(function(value)
-   color.g = value
+   currentColor.g = value
    updateColor()
 end):onPress(updateTexture)
 
 blueSlider:onValueChange(function(value)
-   color.b = value
+   currentColor.b = value
    updateColor()
 end):onPress(updateTexture)
 
@@ -130,10 +133,23 @@ local presetsPage = wheel.newPage()
 presetsAction:setPage(presetsPage)
 
 local presetsColors = {
-   {"#88eeff", "blue"},
-   {"#ffaaee", "pink"},
-   {"#ffffff", "white"},
-}
+      {"#ff5757", "red"},
+      {"#ff7a45", "orange"},
+      {"#ffed66", "yellow"},
+      {"#bdff66", "lime"},
+      {"#5cf761", "green"},
+      {"#5ef4ff", "light blue"},
+      {"#349fc9", "cyan"},
+      {"#4956fc", "blue"},
+      {"#a64dff", "purple"},
+      {"#ff4dff", "magenta"},
+      {"#ffadbc", "pink"},
+      {"#69453f", "brown"},
+      {"#ffffff", "white"},
+      {"#bcbfc4", "light gray"},
+      {"#2f2f2f", "dark gray"},
+      {"#000000", "black"},
+   }
 
 for _, v in ipairs(presetsColors) do
    local action = presetsPage:newAction()
@@ -142,14 +158,14 @@ for _, v in ipairs(presetsColors) do
       :setTitle(v[2])
       :onPress(function()
          wheel.previousPage()
-         color = myColor:copy()
+         currentColor = myColor:copy()
          updateColor()
       end)
 end
 
 ---@param action auria.wheel.action.color_picker
 function api.press(action)
-   color = action.color
+   currentColor = action.color
    texColor = ""
    updateColor()
 end
@@ -163,6 +179,18 @@ function Page:newColorPicker()
       :setTitle("Color")
       :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
    return action
+end
+
+---sets color of color picker, you can use string to set it from hex value
+---@param color Vector3|string
+---@return auria.wheel.action.color_picker
+function methods:setColor(color)
+   if type(color) == "string" then
+      self.color = vectors.hexToRGB(color)
+   else
+      self.color = color
+   end
+   return self
 end
 
 wheel.lib.newActionType("color_picker", api)

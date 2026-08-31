@@ -66,14 +66,15 @@ for k = 1, 4 do
       btn:setIconItem("stone", "NONE")
    end
 end
--- page:newButton()
--- page:newButton()
--- page:newButton()
 
--- page:newToggle()
---    :setTitle("cat")
---    :setValue(true)
---    :setOnChange(function(value)
---       print(value)
---    end)
---    :setIconEmoji(":cat:")
+page:newAction()
+   :setTitle("New action")
+   :setIconEmoji(":+1:")
+   :onPress(function()
+      page:newAction()
+         :setTitle("remove")
+         :setIconEmoji(":zzz:")
+         :onPress(function()
+            page.actions[#page.actions] = nil
+         end)
+   end)

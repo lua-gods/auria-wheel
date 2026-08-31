@@ -148,10 +148,9 @@ function api.popupClosed(action, popup)
 end
 
 ---@param action auria.wheel.action.slider
----@param data auria.wheel.action.render
 ---@param delta number
-function api.actionRender(action, data, delta)
-   local popup = data.popup
+function api.actionRender(action, delta)
+   local popup = action.renderData.popup
    if not popup then return end
    if not popup.data.mouseStart then return end
    local newPos = getUnmappedSliderPos(action, popup, wheel.lib.getMousePos())

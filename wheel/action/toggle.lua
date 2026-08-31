@@ -12,17 +12,11 @@ local methods = {}
 api.methods = methods
 
 ---@param action auria.wheel.action.toggle
----@param data auria.wheel.action.render
-function api.createRenderData(action, data)
+function api.createRenderData(action)
+   local data = action.renderData
    local model = data.model
-   local textTask = model.text:getTask("title") --[[@as TextTask]]
-   local width = 14
-   textTask:setPos(width / 2, 0, 0)
-   local offset = client.getTextWidth(textTask:getText() or "") * -0.5
-   local bg = wheel.lib.models.toggle_bg:copy("")
+   local bg = wheel.lib.models.toggle_bg:copy("bg")
    local toggle = wheel.lib.models.toggle:copy("toggle")
-   bg:setPos(offset, 0, 0)
-   toggle:setPos(offset, 0, 0)
    model.text:addChild(bg):addChild(toggle)
 
    local pos = action.value and 1 or 0
@@ -30,8 +24,21 @@ function api.createRenderData(action, data)
       pos = pos,
       oldPos = pos,
       vel = 0,
-      offset = offset,
+      offset = 0,
    }
+end
+
+---@param action auria.wheel.action.toggle
+function api.updateRenderModel(action)
+   local data = action.renderData
+   local model = data.model
+   local textTask = model.text:getTask("title") --[[@as TextTask]]
+   local width = 14
+   local offset = client.getTextWidth(textTask:getText() or "") * -0.5
+   offset = math.floor(offset)
+   textTask:setPos(width / 2, 0, 0)
+   model.text.bg:setPos(offset, 0, 0)
+   data.data.offset = offset
 end
 
 ---@param action auria.wheel.action.toggle
@@ -43,16 +50,16 @@ function api.press(action)
 end
 
 ---@param action auria.wheel.action.toggle
----@param data auria.wheel.action.render
-function api.actionTick(action, data)
-   local myData = data.data
+function api.actionTick(action)
+   local myData = action.renderData.data
    myData.oldPos = myData.pos
    local target = action.value and 1 or 0
    myData.vel = myData.vel * 0.25 + (target - myData.pos) * 0.75
    myData.pos = myData.pos + myData.vel
 end
 
-function api.actionRender(action, data, delta)
+function api.actionRender(action, delta)
+   local data = action.renderData
    local myData = data.data
    local pos = math.lerp(myData.oldPos, myData.pos, delta)
    data.model.text.toggle:setPos(myData.offset - pos * 4, 0)

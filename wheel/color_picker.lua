@@ -77,9 +77,7 @@ local function updateColor(fromHsv)
    greenSlider:setValue(color.g)
    blueSlider:setValue(color.b)
 
-   colorPreview:setTitle("#"..vectors.rgbToHex(color))--:upper())
-   host:setActionbar(vectors.rgbToHex(color))
-
+   colorPreview:setTitle("#"..vectors.rgbToHex(color):upper())
 end
 
 sliderColor:onValueChange(function(value, valueY)

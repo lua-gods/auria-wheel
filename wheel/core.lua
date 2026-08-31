@@ -134,12 +134,6 @@ local function setPageRaw(page)
    currentPage = page
 end
 
-function Page:rebuildActions()
-   if renderedPages[self] then
-      renderedPages[self].rebuildActions = true
-   end
-end
-
 ---@return Vector2
 function mod.lib.getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
@@ -147,9 +141,21 @@ end
 
 ---@generic self
 ---@param self self
+---@return self
+function Action:updateModel()
+   ---@cast self auria.wheel.action
+   if self.renderData then
+      self.renderData.update = true
+   end
+   return self
+end
+
+---@generic self
+---@param self self
 ---@param text string
 ---@return self
 function Action:setIconEmoji(text)
+   ---@cast self auria.wheel.action
    local model = models:newPart(""):remove()
    local task = model:newText("")
    task:setText(text)
@@ -161,6 +167,7 @@ function Action:setIconEmoji(text)
    self.iconRender = function(opacity)
       task:setOpacity(opacity)
    end
+   self:updateModel()
    return self
 end
 
@@ -171,6 +178,7 @@ end
 ---@param size Vector2
 ---@return self
 function Action:setIconTexture(texture, pos, size)
+   ---@cast self auria.wheel.action
    local model = mod.lib.models.icon:copy("")
    model:setPrimaryTexture("CUSTOM", texture)
    local texSize = texture:getDimensions()
@@ -180,6 +188,7 @@ function Action:setIconTexture(texture, pos, size)
    model:setUVMatrix(mat)
    self.icon = model
    self.iconRender = nil
+   self:updateModel()
    return self
 end
 
@@ -189,12 +198,14 @@ end
 ---@param displayMode? ItemTask.displayMode
 ---@return self
 function Action:setIconItem(item, displayMode)
+   ---@cast self auria.wheel.action
    local model = models:newPart(""):remove()
    local itemTask = model:newItem("")
    itemTask:setItem(item)
    itemTask:setDisplayMode(displayMode or "GUI")
    self.icon = model
    self.iconRender = nil
+   self:updateModel()
    return self
 end
 
@@ -224,7 +235,9 @@ end
 ---@param text string
 ---@return self
 function Action:setTitle(text)
+   ---@cast self auria.wheel.action
    self.title = text
+   self:updateModel()
    return self
 end
 
@@ -257,12 +270,13 @@ function mod.newAction(myType, page)
       ---@type function?
       release = nil,
       type = myType,
+      ---@type auria.wheel.action.render?
+      renderData = nil,
    }
    setmetatable(obj, actionTypes[myType].mt)
    obj:setIconItem("glass_pane")
    if page then
       table.insert(page.actions, obj)
-      page:rebuildActions()
    end
    return obj
 end
@@ -274,9 +288,10 @@ end
 ---press: (fun(action: auria.wheel.action)),
 ---popupOpened: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---popupClosed: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
----actionTick: (fun(action: auria.wheel.action, data: auria.wheel.action.render)),
----actionRender: (fun(action: auria.wheel.action, data: auria.wheel.action.render, delta: number)),
----createRenderData: (fun(action: auria.wheel.action, data: auria.wheel.action.render)),
+---actionTick: (fun(action: auria.wheel.action)),
+---actionRender: (fun(action: auria.wheel.action, delta: number)),
+---createRenderData: (fun(action: auria.wheel.action)),
+---updateRenderModel: (fun(action: auria.wheel.action)),
 ---}
 
 ---@param myType string
@@ -287,6 +302,7 @@ function mod.lib.newActionType(myType, data)
    data.actionTick = data.actionTick or emptyFunc
    data.actionRender = data.actionRender or emptyFunc
    data.createRenderData = data.createRenderData or emptyFunc
+   data.updateRenderModel = data.updateRenderModel or emptyFunc
    -- add built in methods
    data.methods = data.methods or {}
    local methods = data.methods
@@ -336,9 +352,8 @@ local function getRenderPage(page)
       oldScale = 0,
       scale = 0,
       model = hudModel:newPart(""),
-      ---@type auria.wheel.action.render[]
+      ---@type {[auria.wheel.action]: auria.wheel.action.render}
       actions = {},
-      rebuildActions = true,
    }
    renderedPages[page] = data
    return data, true
@@ -384,7 +399,7 @@ end
 ---@return auria.wheel.action_popup?
 function mod.lib.makeActionPopup(action)
    local pageData = getRenderPage(selectedActionPage)
-   local actionData = pageData.actions[selectedActionidx]
+   local actionData = action.renderData
    if not actionData then return end
    local actionTypeData = mod.lib.getActionData(action)
    if not actionTypeData.createPopup then
@@ -427,6 +442,53 @@ function mod.clickAction(action, release)
    mod.lib.getActionData(action).press(action)
    if action.press then
       action.press()
+   end
+end
+
+---@param page auria.wheel.page
+---@param i number
+local function makePageAction(page, i)
+   local data = getRenderPage(page)
+   local action = page.actions[i]
+
+   local model = data.model:newPart("")
+   local textGroup = model:newPart("text")
+   local textTask = textGroup:newText("title")
+
+   ---@class auria.wheel.action.render
+   local myData = {
+      model = model,
+      scale = 1,
+      oldScale = 1,
+      text = textTask,
+      ---@type auria.wheel.action_popup?
+      popup = nil,
+      dir = vec(1, 0, 0),
+      data = {},
+      time = 2,
+      update = true,
+   }
+   action.renderData = myData
+   data.actions[action] = myData
+   textGroup:setPos(0, -12, 0)
+      :setScale(1 / 1.5)
+   textTask:setAlignment("CENTER")
+
+   local typeData = mod.lib.getActionData(action)
+   typeData.createRenderData(action)
+end
+
+---@param page auria.wheel.page
+local function rebuildPageActions(page)
+   local rotScale, rotOffset = getActionsRotScaleAndOffset(#page.actions)
+   for i, action in pairs(page.actions) do
+      if not action.renderData then
+         makePageAction(page, i)
+      end
+      local myData = action.renderData
+      local rot = i * rotScale + rotOffset
+      local dir = vec(-math.sin(rot), math.cos(rot), 0)
+      myData.dir = dir
    end
 end
 
@@ -507,8 +569,19 @@ function events.tick()
       end
       data.oldScale = data.scale
       data.scale = math.lerp(data.scale, target, 0.5)
-      for i, actionData in pairs(data.actions) do
-         local action = page.actions[i]
+      local removePage = false
+      local removedAnyAction = false
+      if not used and math.abs(data.scale - target) < 0.0001 then
+         removePage = true
+         data.model:remove()
+         renderedPages[page] = nil
+      end
+      for i, action in pairs(page.actions) do
+         if action.renderData then
+            action.renderData.time = 2
+         end
+      end
+      for action, actionData in pairs(data.actions) do
          local typeData = mod.lib.getActionData(action)
          local popup = actionData.popup
          local myTarget = 1.5
@@ -520,7 +593,7 @@ function events.tick()
          end
          actionData.oldScale = actionData.scale
          actionData.scale = math.lerp(actionData.scale, myTarget, 0.5)
-         typeData.actionTick(action, actionData)
+         typeData.actionTick(action)
          if popup then
             local popupTarget = 0
             if action == selectedAction and isClicked then
@@ -540,10 +613,16 @@ function events.tick()
                end
             end
          end
+         actionData.time = actionData.time - 1
+         if removePage or actionData.time <= 0 then
+            action.renderData = nil
+            actionData.model:remove()
+            data.actions[action] = nil
+            removedAnyAction = true
+         end
       end
-      if not used and math.abs(data.scale - target) < 0.0001 then
-         data.model:remove()
-         renderedPages[page] = nil
+      if removedAnyAction and not removePage then
+         rebuildPageActions(page)
       end
    end
 end
@@ -569,6 +648,22 @@ RightClickKey.press = function()
    return true
 end
 
+---@param action auria.wheel.action
+local function updateActionModel(action)
+   local data = action.renderData
+   if not data then return end
+
+   data.text:setText(action.title)
+   if data.model.icon then
+      data.model.icon:remove()
+   end
+   data.model:newPart("icon")
+      :addChild(action.icon)
+
+   local typeData = mod.lib.getActionData(action)
+   typeData.updateRenderModel(action)
+end
+
 ---@param page auria.wheel.page
 ---@param delta number
 ---@param globalVisible number
@@ -578,35 +673,6 @@ local function renderPage(page, delta, globalVisible)
    if visible < 0.05 then
       data.model:setVisible(false)
       return
-   end
-   if data.rebuildActions then
-      data.rebuildActions = false
-      data.model:remove()
-      data.model = hudModel:newPart("")
-      for i, action in ipairs(page.actions) do
-         local model = data.model:newPart("")
-         model:addChild(action.icon)
-         local textGroup = model:newPart("text")
-         local textTask = textGroup:newText("title")
-         ---@class auria.wheel.action.render
-         local myData = {
-            model = model,
-            scale = 0,
-            oldScale = 0,
-            text = textTask,
-            ---@type auria.wheel.action_popup?
-            popup = nil,
-            data = {},
-         }
-         data.actions[i] = myData
-         textGroup:setPos(0, -12, 0)
-            :setScale(1 / 1.5)
-         textTask:setText(action.title)
-            :setAlignment("CENTER")
-
-         local typeData = mod.lib.getActionData(action)
-         typeData.createRenderData(action, myData)
-      end
    end
    local opacity = 1 - math.abs(visible - 1)
    opacity = math.clamp(opacity, 0.1, 1)
@@ -619,16 +685,21 @@ local function renderPage(page, delta, globalVisible)
    posScale = math.lerp(posScale, 1, 0.25) * 80
    local sizeScale = math.clamp(2 - visible, 0, 1)
 
-   local rotScale, rotOffset = getActionsRotScaleAndOffset(#data.actions)
-   for i, actionData in pairs(data.actions) do
-      local rot = i * rotScale + rotOffset
-      local pos = vec(-math.sin(rot), math.cos(rot), 0) * posScale
+   for i, action in pairs(page.actions) do
+      if not action.renderData then
+         rebuildPageActions(page)
+      end
+      local actionData = action.renderData
+      if actionData.update then
+         actionData.update = false
+         updateActionModel(action)
+      end
+      local pos = actionData.dir * posScale
       local scale = math.lerp(actionData.oldScale, actionData.scale, delta)
       actionData.model:setPos(pos)
          :setScale(scale * sizeScale)
       actionData.text:setOpacity(opacity)
 
-      local action = page.actions[i]
       if action.iconRender then
          action.iconRender(opacity)
       end
@@ -640,7 +711,7 @@ local function renderPage(page, delta, globalVisible)
             :setOpacity(myVisible)
       end
       local typeData = mod.lib.getActionData(action)
-      typeData.actionRender(action, actionData, delta)
+      typeData.actionRender(action, delta)
    end
 end
 

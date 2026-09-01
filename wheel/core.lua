@@ -241,6 +241,26 @@ function Action:onRelease(func)
    return self
 end
 
+---sets function that will be run when this action is selected
+---@generic self
+---@param self self
+---@param func function
+---@return self
+function Action:onSelect(func)
+   self.select = func
+   return self
+end
+
+---sets function that will be run when this action is deselected
+---@generic self
+---@param self self
+---@param func function
+---@return self
+function Action:onDeselect(func)
+   self.deselect = func
+   return self
+end
+
 ---sets title of this action
 ---@generic self
 ---@param self self
@@ -281,6 +301,10 @@ function mod.newAction(myType, page)
       press = nil,
       ---@type function?
       release = nil,
+      ---@type function?
+      select = nil,
+      ---@type function?
+      deselect = nil,
       type = myType,
       ---@type auria.wheel.action.render?
       renderData = nil,
@@ -298,6 +322,9 @@ end
 ---mt: table,
 ---createPopup: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---press: (fun(action: auria.wheel.action)),
+---release: (fun(action: auria.wheel.action)),
+---select: (fun(action: auria.wheel.action)),
+---deselect: (fun(action: auria.wheel.action)),
 ---popupOpened: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---popupClosed: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---actionTick: (fun(action: auria.wheel.action)),
@@ -311,6 +338,9 @@ end
 function mod.lib.newActionType(myType, data)
    local emptyFunc = function() end
    data.press = data.press or emptyFunc
+   data.release = data.release or emptyFunc
+   data.select = data.select or emptyFunc
+   data.deselect = data.deselect or emptyFunc
    data.actionTick = data.actionTick or emptyFunc
    data.actionRender = data.actionRender or emptyFunc
    data.createRenderData = data.createRenderData or emptyFunc
@@ -443,6 +473,8 @@ end
 ---@param release boolean?
 function mod.clickAction(action, release)
    if release then
+      local typeData = mod.lib.getActionData(action)
+      typeData.release(action)
       if action.release then
          action.release()
       end
@@ -504,6 +536,32 @@ local function rebuildPageActions(page)
    end
 end
 
+---@param page? auria.wheel.page
+---@param i number
+local function setSelectedAction(page, i)
+   if page == selectedActionPage and selectedActionidx == i then
+      return
+   end
+   local oldAction = mod.getSelectedAction()
+   if oldAction then
+      local typeData = mod.lib.getActionData(oldAction)
+      typeData.deselect(oldAction)
+      if oldAction.deselect then
+         oldAction.deselect()
+      end
+   end
+   selectedActionPage = page
+   selectedActionidx = i
+   local action = mod.getSelectedAction()
+   if action then
+      local typeData = mod.lib.getActionData(action)
+      typeData.select(action)
+      if action.select then
+         action.select()
+      end
+   end
+end
+
 function events.tick()
    -- anim
    oldVisibleAnim = visibleAnim
@@ -528,16 +586,16 @@ function events.tick()
       return
    end
    -- select
+
    local isClicked = leftClickKey:isPressed()
    if not isEnabled then
       if isClicked and selectedActionPage then
          mod.clickAction(mod.getSelectedAction(), true)
       end
-      selectedActionidx = -1
-      selectedActionPage = nil
+      setSelectedAction(nil, -1)
    elseif not isClicked then
-      selectedActionidx = -1
-      selectedActionPage = nil
+      local newIdx = -1
+      local newPage = nil
       if currentPage and isEnabled then
          local mousePos = mod.lib.getMousePos()
          getRenderPage(currentPage)
@@ -550,11 +608,12 @@ function events.tick()
             local diff = math.abs(center - i) / actionCount * 360
             local idx = math.floor(i + 1)
             if diff < 70 and currentPage.actions[idx] then
-               selectedActionidx = idx
-               selectedActionPage = currentPage
+               newIdx = idx
+               newPage = currentPage
             end
          end
       end
+      setSelectedAction(newPage, newIdx)
    end
    -- preview
    local previewPage

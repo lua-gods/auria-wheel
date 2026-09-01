@@ -83,9 +83,11 @@ local function updateTexture()
    tex:update()
 end
 
-local function updatePreview()
-   colorPreview:setTitle("#"..vectors.rgbToHex(currentColor):upper())
-   previewIcon.bg:setColor(currentColor)
+---@param color? Vector3
+local function updatePreview(color)
+   color = color or currentColor
+   colorPreview:setTitle("#"..vectors.rgbToHex(color):upper())
+   previewIcon.bg:setColor(color)
 end
 
 ---@param fromHsv boolean?
@@ -168,6 +170,11 @@ function api.press(action)
    currentColor = action.color
    texColor = ""
    updateColor()
+end
+
+---@param action auria.wheel.action.color_picker
+function api.select(action)
+   updatePreview(action.color)
 end
 
 ---creates new color picker

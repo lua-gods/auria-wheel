@@ -3,10 +3,23 @@ local wheel = require("wheel.main")
 local page = wheel.newPage()
 wheel.setPage(page)
 
-page:newToggle()
-   :setTitle("Hello World")
+local mainGroupSize = 4
+local toggle = page:newToggle()
+toggle:setTitle("Groups")
    :setIconEmoji(":fox:")
-   :setToggled(true)
+   :onToggle(function(value)
+      if value then
+         page:setGroupSize(mainGroupSize)
+      else
+         page:setGroupSize()
+      end
+   end)
+   :onScroll(function(dir)
+      mainGroupSize = math.clamp(mainGroupSize + dir, 1, 8)
+      if toggle.value then
+         page:setGroupSize(mainGroupSize)
+      end
+   end)
 page:newColorPicker()
    :setColor(vec(1, 1, 0.5))
 page:newColorPicker()
@@ -90,5 +103,3 @@ page:newAction()
             page.actions[#page.actions] = nil
          end)
    end)
-
-page:setGroupSize(3)

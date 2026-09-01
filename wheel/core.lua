@@ -130,6 +130,8 @@ function mod.newPage()
       closeFunc = nil,
       ---@type number?
       groupSize = nil,
+      ---@type number
+      currentGroup = 1,
    }
    setmetatable(obj, Page)
    return obj
@@ -148,14 +150,6 @@ end
 ---@return auria.wheel.page
 function Page:onClose(func)
    self.closeFunc = func
-   return self
-end
-
----sets amount of actions per group (subpage)
----@param n number?
----@return auria.wheel.page
-function Page:setGroupSize(n)
-   self.groupSize = n
    return self
 end
 
@@ -432,6 +426,20 @@ function mod.getSelectedAction()
 end
 
 ---@param page auria.wheel.page
+---@param i number
+---@return number
+local function clampGroupI(page, i)
+   if not page.groupSize then
+      return 1
+   end
+   i = math.floor(i)
+   local limit = math.ceil(#page.actions / page.groupSize)
+   i = math.min(i, limit)
+   i = math.max(i, 1)
+   return i
+end
+
+---@param page auria.wheel.page
 ---@return auria.wheel.page.render, boolean
 local function getRenderPage(page)
    local data = renderedPages[page]
@@ -445,9 +453,11 @@ local function getRenderPage(page)
       model = hudModel:newPart(""),
       ---@type {[auria.wheel.action]: auria.wheel.action.render}
       actions = {},
+      ---@type auria.wheel.page.group[]
       groups = {},
    }
    renderedPages[page] = data
+   page.currentGroup = clampGroupI(page, page.currentGroup)
    return data, true
 end
 
@@ -541,6 +551,28 @@ end
 
 ---@param page auria.wheel.page
 ---@param i number
+---@return number, number
+local function getGroupSize(page, i)
+   local min = 1
+   local max = #page.actions
+   if page.groupSize then
+      min = (i - 1) * page.groupSize + 1
+      max = min + page.groupSize - 1
+   end
+   return min, max
+end
+
+---@param group auria.wheel.page.group
+---@param page auria.wheel.page
+---@param i number
+local function updatePageGroup(group, page, i)
+   local min, max = getGroupSize(page, i)
+   group.min = min
+   group.max = max
+end
+
+---@param page auria.wheel.page
+---@param i number
 local function makePageAction(page, i)
    local data = getRenderPage(page)
    local action = page.actions[i]
@@ -573,16 +605,52 @@ local function makePageAction(page, i)
 end
 
 ---@param page auria.wheel.page
-local function rebuildPageActions(page)
-   local rotScale, rotOffset = getActionsRotScaleAndOffset(#page.actions)
-   for i, action in pairs(page.actions) do
+---@param group auria.wheel.page.group
+---@param k number
+local function rebuildGroupActions(page, group, k)
+   updatePageGroup(group, page, k)
+   local lastAction = math.min(group.max, #page.actions)
+   local rotScale, rotOffset = getActionsRotScaleAndOffset(lastAction - group.min + 1)
+   local j = 0
+   for i = group.min, lastAction do
+      j = j + 1
+      local action = page.actions[i]
       if not action.renderData then
          makePageAction(page, i)
       end
       local myData = action.renderData
-      local rot = i * rotScale + rotOffset
+      local rot = j * rotScale + rotOffset
       local dir = vec(-math.sin(rot), math.cos(rot), 0)
       myData.dir = dir
+   end
+end
+
+---@param page auria.wheel.page
+---@param i number
+local function makePageGroup(page, i)
+   local data = getRenderPage(page)
+   if data.groups[i] then
+      return
+   end
+   ---@class auria.wheel.page.group
+   local group = {
+      min = 1,
+      max = 0,
+      count = 0,
+      rot = 0,
+      oldRot = 0,
+   }
+   updatePageGroup(group, page, i)
+   rebuildGroupActions(page, group, i)
+   data.groups[i] = group
+end
+
+---@param page auria.wheel.page
+local function rebuildPageActions(page)
+   page.currentGroup = clampGroupI(page, page.currentGroup)
+   local pageData = getRenderPage(page)
+   for k, group in pairs(pageData.groups) do
+      rebuildGroupActions(page, group, k)
    end
 end
 
@@ -612,6 +680,39 @@ local function setSelectedAction(page, i)
    end
 end
 
+---@param n number
+---@return auria.wheel.page
+function Page:setCurrentGroup(n)
+   n = clampGroupI(self, n)
+   local old = self.currentGroup
+   self.currentGroup = n
+   if old ~= n and renderedPages[self] then
+      makePageGroup(self, n)
+      local data = getRenderPage(self)
+      local group = data.groups[n]
+      local rot = n - old
+      group.rot = rot
+      group.oldRot = rot
+   end
+   return self
+end
+
+---sets amount of actions per group (subpage)
+---@param n number?
+---@return auria.wheel.page
+function Page:setGroupSize(n)
+   self.groupSize = n
+   self.currentGroup = clampGroupI(self, self.currentGroup)
+   if renderedPages[self] then
+      rebuildPageActions(self)
+      local pageData = getRenderPage(self)
+      for _, v in pairs(pageData.actions) do
+         v.model:setScale(0, 0, 0)
+      end
+   end
+   return self
+end
+
 function events.tick()
    -- anim
    oldVisibleAnim = visibleAnim
@@ -636,7 +737,6 @@ function events.tick()
       return
    end
    -- select
-
    local isClicked = leftClickKey:isPressed()
    if not isEnabled then
       if isClicked and selectedActionPage then
@@ -651,12 +751,13 @@ function events.tick()
          getRenderPage(currentPage)
          local dist = mousePos:length()
          if dist > 50 then
-            local actionCount = #currentPage.actions
+            local min, max = getGroupSize(currentPage, currentPage.currentGroup)
+            local actionCount = math.min(max, #currentPage.actions) - min + 1
             local angle = math.atan2(mousePos.x, -mousePos.y) - (pageAngleOffsets[actionCount] or 0)
             local i = ((angle / math.pi / 2) % 1) * actionCount
             local center = math.floor(i) + 0.5
             local diff = math.abs(center - i) / actionCount * 360
-            local idx = math.floor(i + 1)
+            local idx = math.floor(i) + min
             if diff < 70 and currentPage.actions[idx] then
                newIdx = idx
                newPage = currentPage
@@ -690,6 +791,11 @@ function events.tick()
       end
       data.oldScale = data.scale
       data.scale = math.lerp(data.scale, target, 0.5)
+      for i, group in pairs(data.groups) do
+         group.oldRot = group.rot
+         local myTarget = (i - page.currentGroup) * 1.2
+         group.rot = math.lerp(group.rot, myTarget, 0.5)
+      end
       local removePage = false
       local removedAnyAction = false
       if not used and math.abs(data.scale - target) < 0.0001 then
@@ -787,7 +893,15 @@ function events.mouse_scroll(dirRaw)
       if action.scroll then
          action.scroll(dir)
       end
+      if action.scroll or typeData.scroll then
+         return true
+      end
    end
+   if not currentPage then
+      return
+   end
+   currentPage:setCurrentGroup(currentPage.currentGroup - dir)
+   return true
 end
 
 ---@param action auria.wheel.action
@@ -827,33 +941,50 @@ local function renderPage(page, delta, globalVisible)
    posScale = math.lerp(posScale, 1, 0.25) * 80
    local sizeScale = math.clamp(2 - visible, 0, 1)
 
-   for i, action in pairs(page.actions) do
-      if not action.renderData then
-         rebuildPageActions(page)
-      end
-      local actionData = action.renderData
-      if actionData.update then
-         actionData.update = false
-         updateActionModel(action)
-      end
-      local pos = actionData.dir * posScale
-      local scale = math.lerp(actionData.oldScale, actionData.scale, delta)
-      actionData.model:setPos(pos)
-         :setScale(scale * sizeScale)
-      actionData.text:setOpacity(opacity)
+   makePageGroup(page, page.currentGroup)
 
-      if action.iconRender then
-         action.iconRender(opacity)
+   local maxActions = #page.actions
+   for k, group in pairs(data.groups) do
+      local groupRot = math.lerp(group.oldRot, group.rot, delta)
+      local myVisible = 1 - math.min(math.abs(groupRot), 1)
+      local myOpacity = myVisible * opacity
+      local mySizeScale = myVisible * sizeScale
+      groupRot = groupRot * 30
+      local posMat = matrices.rotation3(0, 0, groupRot)
+      local groupMax = page.groupSize and math.min(group.max, maxActions) or maxActions
+      for i = group.min, groupMax do
+         local action = page.actions[i]
+         if not action.renderData then
+            rebuildPageActions(page)
+         end
+         local actionData = action.renderData
+         if actionData.update then
+            actionData.update = false
+            updateActionModel(action)
+         end
+         local pos = actionData.dir * posScale
+         local scale = math.lerp(actionData.oldScale, actionData.scale, delta)
+         actionData.model:setPos(pos * posMat)
+            :setScale(scale * mySizeScale)
+            :setRot(0, 0, groupRot)
+         actionData.text:setOpacity(myOpacity)
+
+         if action.iconRender then
+            action.iconRender(myOpacity)
+         end
+         local popup = actionData.popup
+         if popup then
+            local popupVisible = math.lerp(popup.oldVisible, popup.visible, delta)
+            popup.model:setScale(popupVisible)
+               :setPos(pos - vec(0, 0, 50))
+               :setOpacity(popupVisible)
+         end
+         local typeData = mod.lib.getActionData(action)
+         typeData.actionRender(action, delta)
       end
-      local popup = actionData.popup
-      if popup then
-         local myVisible = math.lerp(popup.oldVisible, popup.visible, delta)
-         popup.model:setScale(myVisible)
-            :setPos(pos - vec(0, 0, 50))
-            :setOpacity(myVisible)
+      if myVisible == 0 and page.currentGroup ~= k then
+         data.groups[k] = nil
       end
-      local typeData = mod.lib.getActionData(action)
-      typeData.actionRender(action, delta)
    end
 end
 

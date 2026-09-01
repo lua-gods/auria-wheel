@@ -176,6 +176,8 @@ colorPreview:onPress(function()
 end)
 
 local presetsPage = wheel.newPage()
+presetsPage:setGroupSize(8)
+
 presetsAction:setPage(presetsPage)
 
 local presetsColors = {

@@ -211,7 +211,6 @@ end
 
 mainPage:onClose(function()
    callEvent(3)
-   currentAction = nil
 end)
 
 ---@param action auria.wheel.action.color_picker

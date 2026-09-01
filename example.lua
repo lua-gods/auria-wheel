@@ -11,6 +11,15 @@ page:newColorPicker()
    :setColor(vec(1, 1, 0.5))
 page:newColorPicker()
    :setColor(vec(1, 0, 0.5))
+   :onColorChange(function(color)
+      host:setActionbar("changed "..tostring(color))
+   end)
+   :onColorChangeConfirmed(function(color)
+      print("confirmed", color)
+   end)
+   :onColorChangeFinished(function(color)
+      print("finished", color)
+   end)
 for k = 1, 4 do
    local btn
    if k == 3 then

@@ -8,40 +8,43 @@ local api = {}
 
 ---@class auria.wheel.action.color_picker : auria.wheel.action
 ---@field color Vector3
+---@field colorChange? fun(color: Vector3)
+---@field colorChangeConfirmed? fun(color: Vector3)
+---@field colorChangeFinished? fun(color: Vector3)
 local methods = {}
 api.methods = methods
 
-local page = wheel.newPage()
+local mainPage = wheel.newPage()
 
-local sliderColor = page:newSlider()
+local sliderColor = mainPage:newSlider()
 sliderColor:setTitle("Saturation, value")
    :setIconTexture(wheel.lib.texture, vec(24, 0), vec(8, 8))
    :setBackground(wheel.lib.texture, vec(6.5, 0.5), vec(1, 1), "BLURRY")
    :setBackgroundSize(vec(128, 128))
    :setRange(vec(0, 1), vec(0, 1))
 
-local hueSlider = page:newSlider()
+local hueSlider = mainPage:newSlider()
 hueSlider:setTitle("Hue")
    :setIconTexture(wheel.lib.texture, vec(24, 8), vec(8, 8))
    :setLoop(true)
    :setBackground(wheel.lib.texture, vec(9.5, 0.5), vec(6, 0), "BLURRY")
 
-local redSlider = page:newSlider()
+local redSlider = mainPage:newSlider()
 redSlider:setTitle("Red")
    :setIconTexture(wheel.lib.texture, vec(16, 8), vec(8, 8))
    :setBackground(wheel.lib.texture, vec(9.5, 1.5), vec(1, 0), "BLURRY")
 
-local greenSlider = page:newSlider()
+local greenSlider = mainPage:newSlider()
 greenSlider:setTitle("Green")
    :setIconTexture(wheel.lib.texture, vec(16, 16), vec(8, 8))
    :setBackground(wheel.lib.texture, vec(9.5, 2.5), vec(1, 0), "BLURRY")
 
-local blueSlider = page:newSlider()
+local blueSlider = mainPage:newSlider()
 blueSlider:setTitle("Blue")
    :setIconTexture(wheel.lib.texture, vec(24, 16), vec(8, 8))
    :setBackground(wheel.lib.texture, vec(9.5, 3.5), vec(1, 0), "BLURRY")
 
-local presetsAction = page:newAction()
+local presetsAction = mainPage:newAction()
 presetsAction:setTitle("presets")
    :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
 
@@ -58,13 +61,45 @@ local function makeColorIcon(color)
    return model
 end
 
-local colorPreview = page:newAction()
+local colorPreview = mainPage:newAction()
 local previewIcon = makeColorIcon()
 colorPreview:setIconModel(previewIcon)
 
 local currentColor = vec(1, 1, 1)
 local currentColorHsv = vec(0, 0, 1)
 local texColor = ""
+
+---@type auria.wheel.action.color_picker?
+local currentAction = nil
+
+local colorEventsData = {
+   {"colorChange", ""},
+   {"colorChangeConfirmed", ""},
+   {"colorChangeFinished", ""},
+}
+
+---@param i number
+local function callEvent(i)
+   if not currentAction then return end
+   local colorHex = vectors.rgbToHex(currentColor)
+   local color = vectors.hexToRGB(colorHex)
+   currentAction.color = color:copy()
+   for k = 1, i do
+      local eventData = colorEventsData[k]
+      if eventData[2] ~= colorHex then
+         eventData[2] = colorHex
+         ---@type function?
+         local func = currentAction[ eventData[1] ]
+         if func then
+            func(color:copy())
+         end
+      end
+   end
+end
+
+local function callEvent2()
+   callEvent(2)
+end
 
 local function updateTexture()
    local newColor = vectors.rgbToHex(currentColorHsv)
@@ -109,27 +144,36 @@ sliderColor:onValueChange(function(value, valueY)
    currentColorHsv.y = value
    currentColorHsv.z = valueY
    updateColor(true)
-end):onPress(updateTexture)
+   callEvent(1)
+end):onPress(updateTexture):onRelease(callEvent2)
 
 hueSlider:onValueChange(function(value)
    currentColorHsv.x = value
    updateColor(true)
-end)
+   callEvent(1)
+end):onRelease(callEvent2)
 
 redSlider:onValueChange(function(value)
    currentColor.r = value
    updateColor()
-end):onPress(updateTexture)
+   callEvent(1)
+end):onPress(updateTexture):onRelease(callEvent2)
 
 greenSlider:onValueChange(function(value)
    currentColor.g = value
    updateColor()
-end):onPress(updateTexture)
+   callEvent(1)
+end):onPress(updateTexture):onRelease(callEvent2)
 
 blueSlider:onValueChange(function(value)
    currentColor.b = value
    updateColor()
-end):onPress(updateTexture)
+   callEvent(1)
+end):onPress(updateTexture):onRelease(callEvent2)
+
+colorPreview:onPress(function()
+   callEvent(3)
+end)
 
 local presetsPage = wheel.newPage()
 presetsAction:setPage(presetsPage)
@@ -165,10 +209,20 @@ for _, v in ipairs(presetsColors) do
       end)
 end
 
+mainPage:onClose(function()
+   callEvent(3)
+   currentAction = nil
+end)
+
 ---@param action auria.wheel.action.color_picker
 function api.press(action)
-   currentColor = action.color
+   currentColor = action.color:copy()
    texColor = ""
+   local hex = vectors.rgbToHex(currentColor)
+   for i, v in pairs(colorEventsData) do
+      v[2] = hex
+   end
+   currentAction = action
    updateColor()
 end
 
@@ -182,7 +236,7 @@ end
 function Page:newColorPicker()
    local action = wheel.newAction("color_picker", self)
    action.color = vec(1, 1, 1)
-   action:setPage(page)
+   action:setPage(mainPage)
       :setTitle("Color")
       :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
    return action
@@ -197,6 +251,33 @@ function methods:setColor(color)
    else
       self.color = color
    end
+   return self
+end
+
+---sets function with will be called when color changed during sliding slider
+---@param func? fun(color: Vector3)
+---@return auria.wheel.action.color_picker
+function methods:onColorChange(func)
+   self.colorChange = func
+   return self
+end
+
+---sets function with will be called when color changed after finishing sliding slider
+---might be useful if you do some slower operation with color such as updating texture
+---@param func? fun(color: Vector3)
+---@return auria.wheel.action.color_picker
+function methods:onColorChangeConfirmed(func)
+   self.colorChangeConfirmed = func
+   return self
+end
+
+---sets function with will be called when color changed after closing color picker
+---might be useful if you do some really slower operation with color
+---or you dont need it instantly
+---@param func? fun(color: Vector3)
+---@return auria.wheel.action.color_picker
+function methods:onColorChangeFinished(func)
+   self.colorChangeFinished = func
    return self
 end
 

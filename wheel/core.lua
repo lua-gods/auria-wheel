@@ -123,15 +123,41 @@ function mod.newPage()
    ---@class auria.wheel.page
    local obj = {
       ---@type auria.wheel.action[]
-      actions = {}
+      actions = {},
+      ---@type function?
+      openFunc = nil,
+      ---@type function?
+      closeFunc = nil,
    }
    setmetatable(obj, Page)
    return obj
 end
 
----@param page auria.wheel.page
+---sets function with will be ran when page is opened
+---@param func function
+---@return auria.wheel.page
+function Page:onOpen(func)
+   self.openFunc = func
+   return self
+end
+
+---sets function with will be ran when page is closed
+---@param func function
+---@return auria.wheel.page
+function Page:onClose(func)
+   self.closeFunc = func
+   return self
+end
+
+---@param page? auria.wheel.page
 local function setPageRaw(page)
+   if currentPage and currentPage.closeFunc then
+      currentPage.closeFunc()
+   end
    currentPage = page
+   if currentPage and currentPage.openFunc then
+      currentPage.openFunc()
+   end
 end
 
 ---@return Vector2
@@ -276,7 +302,7 @@ end
 ---sets page that will be opened when this action is clicked
 ---@generic self
 ---@param self self
----@param page auria.wheel.page
+---@param page? auria.wheel.page
 ---@return self
 function Action:setPage(page)
    self.page = page

@@ -128,12 +128,14 @@ function mod.newPage()
       openFunc = nil,
       ---@type function?
       closeFunc = nil,
+      ---@type number?
+      groupSize = nil,
    }
    setmetatable(obj, Page)
    return obj
 end
 
----sets function with will be ran when page is opened
+---sets function with will be run when page is opened
 ---@param func function
 ---@return auria.wheel.page
 function Page:onOpen(func)
@@ -141,11 +143,19 @@ function Page:onOpen(func)
    return self
 end
 
----sets function with will be ran when page is closed
+---sets function with will be run when page is closed
 ---@param func function
 ---@return auria.wheel.page
 function Page:onClose(func)
    self.closeFunc = func
+   return self
+end
+
+---sets amount of actions per group (subpage)
+---@param n number?
+---@return auria.wheel.page
+function Page:setGroupSize(n)
+   self.groupSize = n
    return self
 end
 
@@ -250,7 +260,7 @@ end
 ---sets function that will be run when this action is pressed
 ---@generic self
 ---@param self self
----@param func function
+---@param func? function
 ---@return self
 function Action:onPress(func)
    self.press = func
@@ -260,7 +270,7 @@ end
 ---sets function that will be run when this action is released
 ---@generic self
 ---@param self self
----@param func function
+---@param func? function
 ---@return self
 function Action:onRelease(func)
    self.release = func
@@ -270,7 +280,7 @@ end
 ---sets function that will be run when this action is selected
 ---@generic self
 ---@param self self
----@param func function
+---@param func? function
 ---@return self
 function Action:onSelect(func)
    self.select = func
@@ -280,10 +290,20 @@ end
 ---sets function that will be run when this action is deselected
 ---@generic self
 ---@param self self
----@param func function
+---@param func? function
 ---@return self
 function Action:onDeselect(func)
    self.deselect = func
+   return self
+end
+
+---sets function that will be run when this action is scrolled
+---@generic self
+---@param self self
+---@param func? fun(dir: number)
+---@return self
+function Action:onScroll(func)
+   self.scroll = func
    return self
 end
 
@@ -331,6 +351,8 @@ function mod.newAction(myType, page)
       select = nil,
       ---@type function?
       deselect = nil,
+      ---@type fun(dir: number)?
+      scroll = nil,
       type = myType,
       ---@type auria.wheel.action.render?
       renderData = nil,
@@ -351,6 +373,7 @@ end
 ---release: (fun(action: auria.wheel.action)),
 ---select: (fun(action: auria.wheel.action)),
 ---deselect: (fun(action: auria.wheel.action)),
+---scroll: (fun(action: auria.wheel.action, dir: number)),
 ---popupOpened: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---popupClosed: (fun(action: auria.wheel.action, popup: auria.wheel.action_popup)),
 ---actionTick: (fun(action: auria.wheel.action)),
@@ -422,6 +445,7 @@ local function getRenderPage(page)
       model = hudModel:newPart(""),
       ---@type {[auria.wheel.action]: auria.wheel.action.render}
       actions = {},
+      groups = {},
    }
    renderedPages[page] = data
    return data, true
@@ -743,6 +767,27 @@ RightClickKey.press = function()
    if not isEnabled then return end
    mod.previousPage()
    return true
+end
+
+local scrollOffset = 0
+function events.mouse_scroll(dirRaw)
+   if not isEnabled then return end
+   dirRaw = math.clamp(dirRaw, -1, 1)
+   dirRaw = dirRaw + scrollOffset
+   scrollOffset = dirRaw % 1
+   dirRaw = math.floor(dirRaw)
+   if dirRaw == 0 then return end
+   local dir = dirRaw > 0 and 1 or -1
+   local action = mod.getSelectedAction()
+   if action then
+      local typeData = mod.lib.getActionData(action)
+      if typeData.scroll then
+         typeData.scroll(action, dir)
+      end
+      if action.scroll then
+         action.scroll(dir)
+      end
+   end
 end
 
 ---@param action auria.wheel.action

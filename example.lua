@@ -90,3 +90,5 @@ page:newAction()
             page.actions[#page.actions] = nil
          end)
    end)
+
+page:setGroupSize(3)

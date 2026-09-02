@@ -704,13 +704,20 @@ function Page:setGroupSize(n)
    self.groupSize = n
    self.currentGroup = clampGroupI(self, self.currentGroup)
    if renderedPages[self] then
-      rebuildPageActions(self)
       local pageData = getRenderPage(self)
-      for _, v in pairs(pageData.actions) do
-         v.model:setScale(0, 0, 0)
+      local limit = #self.actions
+      for _, group in pairs(pageData.groups) do
+         for i = group.min, math.min(group.max, limit) do
+            local action = pageData.actions[ self.actions[i] ]
+            action.model:setVisible(false)
+         end
       end
+      rebuildPageActions(self)
    end
    return self
+end
+
+local function removeActionRenderData()
 end
 
 function events.tick()
@@ -893,7 +900,7 @@ function events.mouse_scroll(dirRaw)
       if action.scroll then
          action.scroll(dir)
       end
-      if action.scroll or typeData.scroll then
+      if action.scroll or typeData.scroll or leftClickKey:isPressed() then
          return true
       end
    end
@@ -967,6 +974,7 @@ local function renderPage(page, delta, globalVisible)
          actionData.model:setPos(pos * posMat)
             :setScale(scale * mySizeScale)
             :setRot(0, 0, groupRot)
+            :setVisible(myVisible > 0.01)
          actionData.text:setOpacity(myOpacity)
 
          if action.iconRender then
@@ -974,7 +982,7 @@ local function renderPage(page, delta, globalVisible)
          end
          local popup = actionData.popup
          if popup then
-            local popupVisible = math.lerp(popup.oldVisible, popup.visible, delta)
+            local popupVisible = math.lerp(popup.oldVisible, popup.visible, delta) * myVisible
             popup.model:setScale(popupVisible)
                :setPos(pos - vec(0, 0, 50))
                :setOpacity(popupVisible)

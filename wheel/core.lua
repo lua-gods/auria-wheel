@@ -73,6 +73,12 @@ local pageAngleOffsets = {
    [3] = math.rad(30),
 }
 
+local breadcrumbsModel = hudModel:newPart("")
+local breadcrumbLen = 0
+local breadcrumbOldLen = 0
+---@type auria.wheel.breadcrumb[]
+local breadcrumbs = {}
+
 function mod.setEnabled(state)
    if state == isEnabled then
       return
@@ -352,7 +358,7 @@ function mod.newAction(myType, page)
       renderData = nil,
    }
    setmetatable(obj, actionTypes[myType].mt)
-   obj:setIconItem("glass_pane")
+   obj:setIconModel(mod.lib.models.default_icon)
    if page then
       table.insert(page.actions, obj)
    end
@@ -466,7 +472,7 @@ local function updatePageGroupIndicator(page)
    data.groupIndicatorText:setText(text)
    data.groupIndicator.up:setPos(width, 0, 0)
       :setVisible(current > 1)
-      data.groupIndicator.down:setPos(-width, 0, 0)
+   data.groupIndicator.down:setPos(-width, 0, 0)
       :setVisible(current < groups)
 end
 
@@ -537,6 +543,48 @@ function mod.setAndPushToHistory(page)
    setPageRaw(page)
 end
 
+---@param obj auria.wheel.breadcrumb
+local function updateBreadcrumb(obj)
+   local text = obj.text or obj.fallback
+   local width = client.getTextWidth(text)
+   obj.width = width + obj.extraWidth
+   obj.textTask:setText(text)
+end
+
+---@param i number
+---@param fallback string?
+local function makeBreadcrumb(i, fallback)
+   if i == 1 then
+      fallback = fallback or "Main"
+   else
+      fallback = fallback or "Page"
+   end
+   if breadcrumbs[i] then
+      breadcrumbs[i].fallback = fallback
+      updateBreadcrumb(breadcrumbs[i])
+      return
+   end
+   local model = breadcrumbsModel:newPart("")
+   local textTask = model:newText("")
+   ---@class auria.wheel.breadcrumb
+   local obj = {
+      model = model,
+      textTask = textTask,
+      width = 0,
+      text = nil,
+      fallback = fallback,
+      extraWidth = 12,
+   }
+   if i == 1 then
+      model:addChild(mod.lib.models.breadcrumb_icon)
+   else
+      model:addChild(mod.lib.models.breadcrumb_arrow)
+   end
+   textTask:setPos(-obj.extraWidth, 0, 0)
+   breadcrumbs[i] = obj
+   updateBreadcrumb(obj)
+end
+
 ---creates popup for action
 ---@param action auria.wheel.action
 ---@return auria.wheel.action_popup?
@@ -583,6 +631,7 @@ function mod.clickAction(action, release)
    end
    if action.page then
       mod.setAndPushToHistory(action.page)
+      makeBreadcrumb(#pageHistory, action.title)
    end
    mod.lib.getActionData(action).press(action)
    if action.press then
@@ -761,9 +810,6 @@ function Page:setGroupSize(n)
    return self
 end
 
-local function removeActionRenderData()
-end
-
 function events.tick()
    -- anim
    oldVisibleAnim = visibleAnim
@@ -826,10 +872,8 @@ function events.tick()
          getRenderPage(previewPage)
       end
    end
-   -- update
-   local rendered = 0
+   -- update pages
    for page, data in pairs(renderedPages) do
-      rendered = rendered + 1
       local target = 0
       if page == currentPage then
          target = previewPage and 1.1 or 1
@@ -902,6 +946,19 @@ function events.tick()
       if removedAnyAction and not removePage then
          rebuildPageActions(page)
       end
+   end
+   -- update breadcrumbs
+   breadcrumbOldLen = breadcrumbLen
+   local target = #pageHistory
+   breadcrumbLen = math.lerp(breadcrumbLen, target, 0.5)
+   local loaded = math.max(target, math.ceil(breadcrumbLen))
+   for i = #breadcrumbs, loaded + 1, -1 do
+      local v = breadcrumbs[i]
+      breadcrumbs[i] = nil
+      v.model:remove()
+   end
+   for i = #breadcrumbs + 1, loaded do
+      makeBreadcrumb(i)
    end
 end
 
@@ -1021,7 +1078,7 @@ local function renderPage(page, delta, globalVisible)
          actionData.model:setPos(pos * posMat)
             :setScale(scale * mySizeScale)
             :setRot(0, 0, groupRot)
-            :setVisible(myVisible > 0.01)
+            :setVisible(myVisible > 0.02)
          actionData.text:setOpacity(myOpacity)
 
          if action.iconRender then
@@ -1043,6 +1100,33 @@ local function renderPage(page, delta, globalVisible)
    end
 end
 
+---@param delta number
+---@param globalVisible number
+local function renderBreadcrumbs(delta, globalVisible)
+   local len = math.lerp(breadcrumbOldLen, breadcrumbLen, delta)
+   len = len + 1
+
+   local width = 0
+
+   for i, v in pairs(breadcrumbs) do
+      local visible = math.clamp(len - i, 0, 1)
+      local opacity = visible * globalVisible
+      v.model:setOpacity(opacity)
+         :setVisible(opacity > 0.05)
+         :setPos(-width, 0, 0)
+      v.textTask:setOpacity(opacity)
+      if i == 1 then
+         width = width + v.width
+      else
+         width = width + v.width * visible
+      end
+   end
+
+   local pos = vec(math.floor(width / 2), 124, 0)
+   breadcrumbsModel:setScale(globalVisible)
+      :setPos(pos * globalVisible)
+end
+
 hudModelRoot.preRender = function(delta)
    local globalVisible = math.lerp(oldVisibleAnim, visibleAnim, delta)
    if globalVisible < 0.05 then
@@ -1062,6 +1146,7 @@ hudModelRoot.preRender = function(delta)
    for page in pairs(renderedPages) do
       renderPage(page, delta, globalVisible)
    end
+   renderBreadcrumbs(delta, globalVisible)
 end
 
 return mod

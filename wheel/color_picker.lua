@@ -45,7 +45,7 @@ blueSlider:setTitle("Blue")
    :setBackground(wheel.lib.texture, vec(9.5, 3.5), vec(1, 0), "BLURRY")
 
 local presetsAction = mainPage:newAction()
-presetsAction:setTitle("presets")
+presetsAction:setTitle("Presets")
    :setIconTexture(wheel.lib.texture, vec(16, 24), vec(8, 8))
 
 ---@param color Vector3?
@@ -181,22 +181,22 @@ presetsPage:setGroupSize(8)
 presetsAction:setPage(presetsPage)
 
 local presetsColors = {
-      {"#ff5757", "red"},
-      {"#ff7a45", "orange"},
-      {"#ffed66", "yellow"},
-      {"#bdff66", "lime"},
-      {"#5cf761", "green"},
-      {"#5ef4ff", "light blue"},
-      {"#349fc9", "cyan"},
-      {"#4956fc", "blue"},
-      {"#a64dff", "purple"},
-      {"#ff4dff", "magenta"},
-      {"#ffadbc", "pink"},
-      {"#69453f", "brown"},
-      {"#ffffff", "white"},
-      {"#bcbfc4", "light gray"},
-      {"#2f2f2f", "dark gray"},
-      {"#000000", "black"},
+      {"#ff5757", "Red"},
+      {"#ff7a45", "Orange"},
+      {"#ffed66", "Yellow"},
+      {"#bdff66", "Lime"},
+      {"#5cf761", "Green"},
+      {"#5ef4ff", "Light blue"},
+      {"#349fc9", "Cyan"},
+      {"#4956fc", "Blue"},
+      {"#a64dff", "Purple"},
+      {"#ff4dff", "Magenta"},
+      {"#ffadbc", "Pink"},
+      {"#69453f", "Brown"},
+      {"#ffffff", "White"},
+      {"#bcbfc4", "Light gray"},
+      {"#2f2f2f", "Dark gray"},
+      {"#000000", "Black"},
    }
 
 for _, v in ipairs(presetsColors) do

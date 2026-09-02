@@ -15,6 +15,7 @@ local methods = {}
 api.methods = methods
 
 local mainPage = wheel.newPage()
+mainPage:setTitle("Color picker")
 
 local sliderColor = mainPage:newSlider()
 sliderColor:setTitle("Saturation, value")
@@ -224,6 +225,7 @@ function api.press(action)
       v[2] = hex
    end
    currentAction = action
+   presetsPage:setCurrentGroup(1)
    updateColor()
 end
 

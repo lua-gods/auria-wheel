@@ -1,28 +1,30 @@
 local wheel = require("wheel.main")
 
-local page = wheel.newPage()
-wheel.setPage(page)
+local mainPage = wheel.newPage()
+wheel.setPage(mainPage)
 
 local mainGroupSize = 4
-local toggle = page:newToggle()
+local toggle = mainPage:newToggle()
 toggle:setTitle("Groups")
    :setIconEmoji(":fox:")
    :onToggle(function(value)
       if value then
-         page:setGroupSize(mainGroupSize)
+         mainPage:setGroupSize(mainGroupSize)
       else
-         page:setGroupSize()
+         mainPage:setGroupSize()
       end
    end)
    :onScroll(function(dir)
       mainGroupSize = math.clamp(mainGroupSize + dir, 1, 8)
       if toggle.value then
-         page:setGroupSize(mainGroupSize)
+         mainPage:setGroupSize(mainGroupSize)
       end
    end)
-page:newColorPicker()
+
+mainPage:newColorPicker()
    :setColor(vec(1, 1, 0.5))
-page:newColorPicker()
+
+mainPage:newColorPicker()
    :setColor(vec(1, 0, 0.5))
    :onColorChange(function(color)
       host:setActionbar("changed "..tostring(color))
@@ -33,73 +35,62 @@ page:newColorPicker()
    :onColorChangeFinished(function(color)
       print("finished", color)
    end)
-for k = 1, 4 do
-   local btn
-   if k == 3 then
-      btn = page:newSlider()
-      btn:onValueChange(function(value, valueY)
-         host:setActionbar(tostring(value))
+
+do
+   local page2 = wheel.newPage()
+   for a = 1, 10 do
+      local page3 = wheel.newPage()
+      page2:newAction()
+         :setPage(page3)
+         :setTitle(a.." actions")
+      for b = 1, a do
+         page3:newToggle()
+            :setTitle("action: "..b)
+      end
+   end
+   mainPage:newAction()
+      :setPage(page2)
+      :setIconEmoji(":dragon:")
+end
+
+do
+   local btn = mainPage:newSlider()
+   btn:setRange(vec(2, 1), vec(2, 1))
+      :setBackgroundSize(vec(64, 64))
+      :setStep(0.25)
+      :onRelease(function()
+         host:setActionbar(tostring(vec(btn.value, btn.valueY)))
       end)
-   elseif k == 2 then
-      btn = page:newSlider()
-      btn:setRange(vec(2, 1), vec(2, 1))
-         :setBackgroundSize(vec(64, 64))
-         :setStep(0.25)
-         :onRelease(function()
-            host:setActionbar(tostring(vec(btn.value, btn.valueY)))
-         end)
-   else
-      btn = page:newAction()
-   end
-   if k == 4 then
-      local page2 = wheel.newPage()
-      for a = 1, 8 do
-         local btn2 = page2:newAction()
-         if a == 8 then
-            local page3 = wheel.newPage()
-            for _ = 1, 5 do
-               page3:newAction()
-            end
-            btn2:setPage(page3)
-            if k == 1 then
-               btn2:setIconEmoji(":@auria:")
-            end
-         end
-      end
-      btn:setPage(page2)
-   elseif k == 1 then
-      local page2 = wheel.newPage()
-      btn:setPage(page2)
-      for a = 1, 10 do
-         local page3 = wheel.newPage()
-         page2:newAction()
-            :setPage(page3)
-            :setTitle(a.." actions")
-         for b = 1, a do
-            page3:newToggle()
-               :setTitle("action: "..b)
-         end
-      end
-   end
-   if k == 1 then
-      btn:setIconEmoji(":dragon:")
-   elseif k == 4 then
-      btn:setIconEmoji(":@gn:")
-   elseif k == 2 then
-      -- btn:setIconTexture(textures["textures.hair"], vec(16, 8), vec(8, 8))
-   elseif k == 3 then
-      btn:setIconItem("stone", "NONE")
+end
+
+mainPage:newSlider()
+   :onValueChange(function(value, valueY)
+      host:setActionbar(tostring(value))
+   end)
+   :setIconItem("stone", "NONE")
+
+do
+   local page = wheel.newPage()
+   mainPage:newAction()
+      :setPage(page)
+      :setIconEmoji(":@auria:")
+   for i = 1, 8 do
+      local newPage = wheel.newPage()
+      newPage:setTitle("Page "..i)
+      page:newAction()
+         :setPage(newPage)
+      page = newPage
    end
 end
 
-page:newAction()
+mainPage:newAction()
    :setTitle("New action")
    :setIconEmoji(":+1:")
    :onPress(function()
-      page:newAction()
+      mainPage:newAction()
          :setTitle("remove")
          :setIconEmoji(":zzz:")
          :onPress(function()
-            page.actions[#page.actions] = nil
+            mainPage.actions[#mainPage.actions] = nil
          end)
    end)

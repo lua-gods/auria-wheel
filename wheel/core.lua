@@ -78,6 +78,13 @@ local breadcrumbLen = 0
 local breadcrumbOldLen = 0
 ---@type auria.wheel.breadcrumb[]
 local breadcrumbs = {}
+local breadcrumbsEllipsis = breadcrumbsModel:newText("")
+local breadcrumbsEllipsisWidth = 0
+do
+   local text = "..."
+   breadcrumbsEllipsis:setText(text)
+   breadcrumbsEllipsisWidth = client.getTextWidth(text) + 12
+end
 
 function mod.setEnabled(state)
    if state == isEnabled then
@@ -545,6 +552,9 @@ end
 
 ---@param obj auria.wheel.breadcrumb
 local function updateBreadcrumb(obj)
+   if obj.page then
+      obj.text = obj.page.title
+   end
    local text = obj.text or obj.fallback
    local width = client.getTextWidth(text)
    obj.width = width + obj.extraWidth
@@ -555,13 +565,16 @@ end
 ---@param fallback string?
 local function makeBreadcrumb(i, fallback)
    if i == 1 then
-      fallback = fallback or "Main"
+      fallback = fallback or "Home"
    else
       fallback = fallback or "Page"
    end
+   local page = pageHistory[i]
    if breadcrumbs[i] then
-      breadcrumbs[i].fallback = fallback
-      updateBreadcrumb(breadcrumbs[i])
+      local obj = breadcrumbs[i]
+      obj.fallback = fallback
+      obj.page = page
+      updateBreadcrumb(obj)
       return
    end
    local model = breadcrumbsModel:newPart("")
@@ -571,9 +584,12 @@ local function makeBreadcrumb(i, fallback)
       model = model,
       textTask = textTask,
       width = 0,
+      ---@type string?
       text = nil,
       fallback = fallback,
       extraWidth = 12,
+      ---@type auria.wheel.page?
+      page = page,
    }
    if i == 1 then
       model:addChild(mod.lib.models.breadcrumb_icon)
@@ -583,6 +599,22 @@ local function makeBreadcrumb(i, fallback)
    textTask:setPos(-obj.extraWidth, 0, 0)
    breadcrumbs[i] = obj
    updateBreadcrumb(obj)
+end
+
+
+---sets title of this page
+---@param text string?
+---@return auria.wheel.page
+function Page:setTitle(text)
+   self.title = text
+   local lastPage = pageHistory[#pageHistory]
+   if lastPage == currentPage then
+      local obj = breadcrumbs[#pageHistory]
+      if obj then
+         updateBreadcrumb(obj)
+      end
+   end
+   return self
 end
 
 ---creates popup for action
@@ -982,6 +1014,8 @@ RightClickKey.press = function()
    mod.previousPage()
    return true
 end
+RightClickKey.release = function()
+end
 
 local scrollOffset = 0
 function events.mouse_scroll(dirRaw)
@@ -1106,23 +1140,43 @@ local function renderBreadcrumbs(delta, globalVisible)
    local len = math.lerp(breadcrumbOldLen, breadcrumbLen, delta)
    len = len + 1
 
+   local ellipsisVisible = math.clamp(len - 6, 0, 1)
+   breadcrumbsEllipsis:setOpacity(ellipsisVisible)
+   breadcrumbsEllipsis:setVisible(ellipsisVisible > 0.05)
+
    local width = 0
 
    for i, v in pairs(breadcrumbs) do
-      local visible = math.clamp(len - i, 0, 1)
+      local offset = len - i
+      local visible = math.clamp(offset, 0, 1)
+      if i >= 4 then
+         visible = visible * math.clamp(3 - offset, 0, 1)
+      end
       local opacity = visible * globalVisible
+      opacity = opacity * opacity
       v.model:setOpacity(opacity)
          :setVisible(opacity > 0.05)
-         :setPos(-width, 0, 0)
-      v.textTask:setOpacity(opacity)
-      if i == 1 then
-         width = width + v.width
-      else
-         width = width + v.width * visible
+         :setPos(-width, (visible - 1) * 2, 0)
+      local textOpacity = opacity
+      if i == 3 then
+         textOpacity = textOpacity * (1 - ellipsisVisible)
+         breadcrumbsEllipsis:setPos(-width - 12, 0, 0)
       end
+      v.textTask:setOpacity(textOpacity)
+         :setVisible(textOpacity > 0.05)
+      local myWidth = 0
+      if i == 1 then
+         myWidth = v.width
+      else
+         myWidth = v.width * visible
+      end
+      if i == 3 then
+         myWidth = math.lerp(myWidth, breadcrumbsEllipsisWidth, ellipsisVisible)
+      end
+      width = width + myWidth
    end
 
-   local pos = vec(math.floor(width / 2), 124, 0)
+   local pos = vec(math.round(width / 2), 124, 0)
    breadcrumbsModel:setScale(globalVisible)
       :setPos(pos * globalVisible)
 end

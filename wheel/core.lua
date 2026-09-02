@@ -440,17 +440,57 @@ local function clampGroupI(page, i)
 end
 
 ---@param page auria.wheel.page
+local function updatePageGroupIndicator(page)
+   local data = renderedPages[page]
+   if not data then
+      return
+   end
+   if not page.groupSize then
+      data.groupIndicator:setVisible(false)
+      return
+   end
+   local groups = math.ceil(#page.actions / page.groupSize)
+   if groups <= 1 then
+      data.groupIndicator:setVisible(false)
+      return
+   end
+   local current = page.currentGroup
+   local text = toJson{
+      "Page ",
+      {text = tostring(current), color = "#ffaaee"},
+      " of ",
+      {text = tostring(groups), color = "#ffaaee"},
+   }
+   local width = math.ceil(client.getTextWidth(text) / 2)
+   data.groupIndicator:setVisible(true)
+   data.groupIndicatorText:setText(text)
+   data.groupIndicator.up:setPos(width, 0, 0)
+      :setVisible(current > 1)
+      data.groupIndicator.down:setPos(-width, 0, 0)
+      :setVisible(current < groups)
+end
+
+---@param page auria.wheel.page
 ---@return auria.wheel.page.render, boolean
 local function getRenderPage(page)
    local data = renderedPages[page]
    if data then
       return data, false
    end
+   local model = hudModel:newPart("")
+   local groupIndicator = model:newPart("")
+   groupIndicator:setPos(0, -128, 0)
+      :addChild(mod.lib.models.group_arrow_up  :copy("up"  ))
+      :addChild(mod.lib.models.group_arrow_down:copy("down"))
+   local textTask = groupIndicator:newText("")
+   textTask:setAlignment("CENTER")
    ---@class auria.wheel.page.render
    data = {
       oldScale = 0,
       scale = 0,
-      model = hudModel:newPart(""),
+      model = model,
+      groupIndicator = groupIndicator,
+      groupIndicatorText = textTask,
       ---@type {[auria.wheel.action]: auria.wheel.action.render}
       actions = {},
       ---@type auria.wheel.page.group[]
@@ -458,6 +498,7 @@ local function getRenderPage(page)
    }
    renderedPages[page] = data
    page.currentGroup = clampGroupI(page, page.currentGroup)
+   updatePageGroupIndicator(page)
    return data, true
 end
 
@@ -652,6 +693,7 @@ local function rebuildPageActions(page)
    for k, group in pairs(pageData.groups) do
       rebuildGroupActions(page, group, k)
    end
+   updatePageGroupIndicator(page)
 end
 
 ---@param page? auria.wheel.page
@@ -694,6 +736,7 @@ function Page:setCurrentGroup(n)
       group.rot = rot
       group.oldRot = rot
    end
+   updatePageGroupIndicator(self)
    return self
 end
 
@@ -714,6 +757,7 @@ function Page:setGroupSize(n)
       end
       rebuildPageActions(self)
    end
+   updatePageGroupIndicator(self)
    return self
 end
 
@@ -947,6 +991,9 @@ local function renderPage(page, delta, globalVisible)
    local posScale = math.max(visible, 1)
    posScale = math.lerp(posScale, 1, 0.25) * 80
    local sizeScale = math.clamp(2 - visible, 0, 1)
+
+   data.groupIndicator:setOpacity(opacity)
+      :setScale(sizeScale)
 
    makePageGroup(page, page.currentGroup)
 

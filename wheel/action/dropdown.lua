@@ -86,9 +86,14 @@ end
 
 ---@param action auria.wheel.action.dropdown
 function api.press(action)
-   local popup = wheel.lib.makeActionPopup(action)
+   local popup, isNew = wheel.lib.makeActionPopup(action)
    if not popup then return end
    popup.data.mouseStart = wheel.lib.getMousePos().y
+   if isNew then
+      local pos = -wheel.lib.getMousePos()
+      pos.y = pos.y + (action.value - #action.choices * 0.5) * 10 - 5
+      popup.pos = pos:augmented(0)
+   end
 end
 
 ---@param action auria.wheel.action.dropdown
@@ -104,12 +109,15 @@ end
 ---@param action auria.wheel.action.dropdown
 ---@param dir number
 function api.scroll(action, dir)
-   local popup = wheel.lib.makeActionPopup(action, 40)
+   local popup, isNew = wheel.lib.makeActionPopup(action, 20)
    if not popup then return end
    local v = popup.data.startValue - dir
    local mouseOffset = popup.data.startValue - action.value
    v = clampValue(action, v - mouseOffset) + mouseOffset
    popup.data.startValue = v
+   if isNew then
+      popup.pos = nil
+   end
 end
 
 ---@param action auria.wheel.action.dropdown

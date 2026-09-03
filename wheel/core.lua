@@ -691,7 +691,7 @@ end
 ---creates popup for action
 ---@param action auria.wheel.action
 ---@param time? number
----@return auria.wheel.action_popup?
+---@return auria.wheel.action_popup?, boolean?
 function mod.lib.makeActionPopup(action, time)
    local pageData = getRenderPage(selectedActionPage)
    local actionData = action.renderData
@@ -700,6 +700,7 @@ function mod.lib.makeActionPopup(action, time)
    if not actionTypeData.createPopup then
       return
    end
+   local isNew = false
    if not actionData.popup then
       local model = pageData.model:newPart("")
       ---@class auria.wheel.action_popup
@@ -709,19 +710,22 @@ function mod.lib.makeActionPopup(action, time)
          oldVisible = 0,
          isOpen = false,
          data = {},
-         time = 0
+         time = 0,
+         ---@type Vector3?
+         pos = nil,
       }
       actionTypeData.createPopup(action, actionData.popup)
    end
    local popup = actionData.popup
    if not popup.isOpen then
+      isNew = true
       popup.isOpen = true
       if actionTypeData.popupOpened then
          actionTypeData.popupOpened(action, actionData.popup)
       end
    end
    popup.time = math.max(popup.time, time or 0)
-   return popup
+   return popup, isNew
 end
 
 ---@param action auria.wheel.action
@@ -1204,7 +1208,7 @@ local function renderPage(page, delta, globalVisible)
          if popup then
             local popupVisible = math.lerp(popup.oldVisible, popup.visible, delta) * myVisible
             popup.model:setScale(popupVisible)
-               :setPos(pos - vec(0, 0, 50))
+               :setPos((popup.pos or pos) - vec(0, 0, 50))
                :setOpacity(popupVisible)
          end
          local typeData = mod.lib.getActionData(action)

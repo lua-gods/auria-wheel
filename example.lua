@@ -21,8 +21,20 @@ toggle:setTitle("Groups")
       end
    end)
 
-mainPage:newColorPicker()
-   :setColor(vec(1, 1, 0.5))
+mainPage:newDropdown()
+   :setTitle("Dropdown")
+   :setChoices({
+      "cat",
+      "fox",
+      "dragon",
+   })
+   :setIconEmoji(":notepad:")
+   :onValueChange(function(i, str)
+      host:setActionbar(str)
+   end)
+   :onValueChangeFinish(function(i, str)
+      host:setActionbar("confirmed "..str)
+   end)
 
 mainPage:newColorPicker()
    :setColor(vec(1, 0, 0.5))
@@ -82,21 +94,6 @@ do
       page = newPage
    end
 end
-
-mainPage:newDropdown()
-   :setTitle("Dropdown")
-   :setChoices({
-      "cat",
-      "fox",
-      "dragon",
-   })
-   :setIconEmoji(":notepad:")
-   :onValueChange(function(i, str)
-      host:setActionbar(str)
-   end)
-   :onValueChangeFinish(function(i, str)
-      host:setActionbar("confirmed "..str)
-   end)
 
 mainPage:newAction()
    :setTitle("New action")

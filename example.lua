@@ -83,8 +83,8 @@ do
    end
 end
 
-mainPage:newSelection()
-   :setTitle("Selection")
+mainPage:newDropdown()
+   :setTitle("Dropdown")
    :setChoices({
       "cat",
       "fox",
@@ -97,7 +97,6 @@ mainPage:newSelection()
    :onValueChangeFinish(function(i, str)
       host:setActionbar("confirmed "..str)
    end)
-   :setValue("fox")
 
 mainPage:newAction()
    :setTitle("New action")

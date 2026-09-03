@@ -74,8 +74,8 @@ function api.createPopup(action, popup)
    model:setPos(size:augmented(2) * 0.5)
    -- data
    popup.data = {
-      startValue = action.value,
-      offset = 0,
+      orginalValue = 0,
+      startValue = 0,
       lastValue = action.value,
       choices = choices,
       indicator = indicator,
@@ -88,23 +88,28 @@ end
 function api.press(action)
    local popup = wheel.lib.makeActionPopup(action)
    if not popup then return end
-   popup.data.startValue = action.value
    popup.data.mouseStart = wheel.lib.getMousePos().y
 end
 
 ---@param action auria.wheel.action.dropdown
 function api.release(action)
-   -- if not action.renderData then
-      -- return
-   -- end
-   -- local popup = action.renderData.popup
-   -- popup.data.startValue = action.value
+   if not action.renderData then
+      return
+   end
+   local popup = action.renderData.popup
+   popup.data.startValue = action.value
+   popup.data.mouseStart = nil
 end
 
+---@param action auria.wheel.action.dropdown
+---@param dir number
 function api.scroll(action, dir)
    local popup = wheel.lib.makeActionPopup(action, 40)
    if not popup then return end
-   popup.data.offset = popup.data.offset - dir
+   local v = popup.data.startValue - dir
+   local mouseOffset = popup.data.startValue - action.value
+   v = clampValue(action, v - mouseOffset) + mouseOffset
+   popup.data.startValue = v
 end
 
 ---@param action auria.wheel.action.dropdown
@@ -115,21 +120,24 @@ local function getNewValue(action, popup)
    if popup.data.mouseStart then
       offset = wheel.lib.getMousePos().y - popup.data.mouseStart
    end
+   offset = math.round(offset / 10)
    local v = popup.data.startValue
-   v = v + popup.data.offset
-   return clampValue(action, v + math.round(offset / 10))
+   return clampValue(action, v + offset)
 end
 
 ---@param action auria.wheel.action.dropdown
 ---@param popup auria.wheel.action_popup
 function api.popupOpened(action, popup)
    action.value = clampValue(action, action.value)
+   popup.data.startValue = action.value
+   popup.data.orginalValue = action.value
 end
 
 ---@param action auria.wheel.action.dropdown
 ---@param popup auria.wheel.action_popup
 function api.popupClosed(action, popup)
-   if popup.data.startValue ~= action.value then
+   if popup.data.orginalValue ~= action.value then
+      popup.data.orginalValue = action.value
       if action.valueChangeFinish then
          action.valueChangeFinish(action.value, action.choices[action.value])
       end

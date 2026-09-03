@@ -182,6 +182,11 @@ function mod.lib.getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
 end
 
+---@return boolean
+function mod.lib.isClicked()
+   return leftClickKey:isPressed()
+end
+
 ---@param tex Texture
 ---@param pos Vector2
 ---@param size Vector2
@@ -685,8 +690,9 @@ end
 
 ---creates popup for action
 ---@param action auria.wheel.action
+---@param time? number
 ---@return auria.wheel.action_popup?
-function mod.lib.makeActionPopup(action)
+function mod.lib.makeActionPopup(action, time)
    local pageData = getRenderPage(selectedActionPage)
    local actionData = action.renderData
    if not actionData then return end
@@ -703,6 +709,7 @@ function mod.lib.makeActionPopup(action)
          oldVisible = 0,
          isOpen = false,
          data = {},
+         time = 0
       }
       actionTypeData.createPopup(action, actionData.popup)
    end
@@ -713,6 +720,7 @@ function mod.lib.makeActionPopup(action)
          actionTypeData.popupOpened(action, actionData.popup)
       end
    end
+   popup.time = math.max(popup.time, time or 0)
    return popup
 end
 
@@ -932,7 +940,7 @@ function events.tick()
       return
    end
    -- select
-   local isClicked = leftClickKey:isPressed()
+   local isClicked = mod.lib.isClicked()
    if not isEnabled then
       if isClicked and selectedActionPage then
          mod.clickAction(mod.getSelectedAction(), true)
@@ -1016,8 +1024,16 @@ function events.tick()
          typeData.actionTick(action)
          if popup then
             local popupTarget = 0
-            if action == selectedAction and isClicked then
-               popupTarget = 1
+            if action == selectedAction then
+               if isClicked then
+                  popupTarget = 1
+                  popup.time = 0
+               elseif popup.time >= 1 then
+                  popupTarget = 1
+                  popup.time = math.max(popup.time - 1, 0)
+               end
+            else
+               popup.time = 0
             end
             popup.oldVisible = popup.visible
             popup.visible = math.lerp(popup.visible, popupTarget, 0.5)

@@ -30,36 +30,39 @@ hueUVMatrix:scale(6, 0, 1)
 ---@param action auria.wheel.action.slider
 ---@param popup auria.wheel.action_popup
 function api.createPopup(action, popup)
-   popup.data = {
-      lastValue = vec(0, 0),
-   }
    -- model
    local model = popup.model
-   for _, v in pairs(wheel.lib.models.slider:getChildren()) do
-      v:copy(v:getName())
-         :light(15, 15)
-         :moveTo(model)
-   end
+   wheel.lib.models.slider_indicator:copy("indicator"):light(15, 15)
+      :moveTo(model)
    local size = action.backgroundSize
+   local bgModel
    if action.bgTexture then
-      local bg = wheel.lib.models.sprite:copy("bg")
-      model:addChild(bg)
-      bg:setPrimaryTexture("CUSTOM", action.bgTexture)
+      bgModel = wheel.lib.models.nineslice:copy("bg")
+      bgModel:setPrimaryTexture("CUSTOM", action.bgTexture)
          :setUVMatrix(action.bgMatrix)
       if action.bgRenderType then
-         bg:setPrimaryRenderType(action.bgRenderType)
+         bgModel:setPrimaryRenderType(action.bgRenderType)
       end
    else
-      model:addChild(wheel.lib.models.slider_bg:copy("bg"))
+      bgModel = wheel.lib.models.slider_bg:copy("bg")
       model.indicator:setVisible(false)
    end
-   local size2 = size:augmented(0)
-   model.bg:setScale(size2)
-      :setPos(size2 / -2 + vec(0, 0, -1))
-   model.outline1:setPos(size2 / 2):scale(size.x + 4, 2, 1)
-   model.outline2:setPos(size2 / -2):scale(size.x + 4, 2, 1)
-   model.outline3:setPos(size2 / 2):scale(2, size.y, 1)
-   model.outline4:setPos(size2 / -2):scale(2, size.y, 1)
+
+   local bgSize = size + 4
+   local outline = wheel.lib.makeNineslice(
+      wheel.lib.texture,
+      vec(0, 32, 5, 5),
+      2,
+      bgSize,
+      bgModel
+   )
+   outline:setPos(bgSize:augmented(-2) / 2)
+   model:addChild(outline)
+   -- data
+   popup.data = {
+      lastValue = vec(0, 0),
+      bg = bgModel,
+   }
 end
 
 function api.press(action)
@@ -163,7 +166,7 @@ function api.actionRender(action, delta)
    local pos = popup.data.pos
    local tex = action.bgTexture
    if not tex then
-      popup.model.bg:setUVPixels(1 - pos.x, pos.y - 1)
+      popup.data.bg:setUVPixels(1 - pos.x, pos.y - 1)
       return
    end
    local modelPos = vec(-pos.x, pos.y - 1) * action.backgroundSize - action.backgroundSize * -0.5
@@ -191,12 +194,8 @@ end
 ---@param renderType? ModelPart.renderType
 ---@return auria.wheel.action.slider
 function methods:setBackground(texture, pos, size, renderType)
-   local texSize = texture:getDimensions()
-   local mat = matrices.mat3()
-   mat:scale((size / texSize):augmented(1))
-   mat:translate(pos / texSize)
    self.bgTexture = texture
-   self.bgMatrix = mat
+   self.bgMatrix = wheel.lib.makeUVMat(texture, pos, size)
    self.bgRenderType = renderType
    return self
 end

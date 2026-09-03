@@ -182,6 +182,76 @@ function mod.lib.getMousePos()
    return (client.getMousePos() / client.getWindowSize() - 0.5) * client.getScaledWindowSize()
 end
 
+---@param tex Texture
+---@param pos Vector2
+---@param size Vector2
+function mod.lib.makeUVMat(tex, pos, size)
+   local texSize = tex:getDimensions()
+   local mat = matrices.mat3()
+   mat:scale((size / texSize):augmented(1))
+   mat:translate(pos / texSize)
+   return mat
+end
+
+do
+   ---@param rootModel ModelPart
+   ---@param tex Texture
+   ---@param pos Vector2
+   ---@param uvSize Vector2
+   ---@param size Vector2
+   ---@return ModelPart
+   local function makePart(rootModel, tex, pos, uvSize, size)
+      local model = mod.lib.models.nineslice:copy("")
+      rootModel:addChild(model)
+      model:setUVMatrix(mod.lib.makeUVMat(tex, pos, uvSize))
+         :setScale(size.x, size.y, 1)
+      return model
+   end
+   ---@param tex Texture
+   ---@param uv Vector4 # pos, size
+   ---@param gap number
+   ---@param size Vector2
+   ---@param center? ModelPart
+   ---@return ModelPart
+   function mod.lib.makeNineslice(tex, uv, gap, size, center)
+      local model = models:newPart(""):remove()
+      model:setPrimaryTexture("CUSTOM", tex)
+      local gap2 = vec(gap, gap)
+      local uvSize = uv.zw
+      ---@cast uvSize Vector2
+      local uvEnd = uv.xy + uvSize
+      local uvCenterSize = uvSize - gap * 2
+      local centerSize = size - gap * 2
+      local centerCorner = gap2 - size
+      -- corners
+      makePart(model, tex, uv.xy, gap2, gap2)
+      makePart(model, tex, vec(uvEnd.x - gap, uv.y), gap2, gap2)
+         :setPos(centerCorner.x, 0, 0)
+      makePart(model, tex, vec(uv.x, uvEnd.y - gap), gap2, gap2)
+         :setPos(0, centerCorner.y, 0)
+      makePart(model, tex, uvEnd - gap, gap2, gap2)
+         :setPos(centerCorner.x, centerCorner.y, 0)
+      -- edges
+      makePart(model, tex, vec(uv.x + gap, uv.y), vec(uvCenterSize.x, gap), vec(centerSize.x, gap))
+         :setPos(-gap, 0, 0)
+      makePart(model, tex, vec(uv.x + gap, uvEnd.y - gap), vec(uvCenterSize.x, gap), vec(centerSize.x, gap))
+         :setPos(-gap, centerCorner.y, 0)
+      makePart(model, tex, vec(uv.x, uv.y + gap), vec(gap, uvCenterSize.y), vec(gap, centerSize.y))
+         :setPos(0, -gap, 0)
+      makePart(model, tex, vec(uvEnd.x - gap, uv.y + gap), vec(gap, uvCenterSize.y), vec(gap, centerSize.y))
+         :setPos(centerCorner.x, -gap, 0)
+      -- center
+      if center then
+         model:addChild(center)
+      else
+         center = makePart(model, tex, uv.xy + gap, uvSize - gap * 2, centerSize)
+      end
+      center:setScale(centerSize.x, centerSize.y, 0)
+      center:setPos(-gap, -gap, 0)
+      return model
+   end
+end
+
 ---@generic self
 ---@param self self
 ---@return self
@@ -224,11 +294,7 @@ function Action:setIconTexture(texture, pos, size)
    ---@cast self auria.wheel.action
    local model = mod.lib.models.icon:copy("")
    model:setPrimaryTexture("CUSTOM", texture)
-   local texSize = texture:getDimensions()
-   local mat = matrices.mat3()
-   mat:scale((size / texSize):augmented(1))
-   mat:translate(pos / texSize)
-   model:setUVMatrix(mat)
+   model:setUVMatrix(mod.lib.makeUVMat(texture, pos, size))
    self.icon = model
    self.iconRender = nil
    self:updateModel()

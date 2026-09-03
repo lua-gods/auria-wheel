@@ -2,7 +2,6 @@ local wheel = require("../core") ---@class auria.wheel
 ---@class auria.wheel.page
 local Page = wheel.lib.page
 
-local myTextureSize = wheel.lib.texture:getDimensions()
 local defaultBgSize = vec(96, 12)
 
 ---@type auria.wheel.action_data
@@ -22,10 +21,6 @@ local api = {}
 ---@field valueChange (fun(value: number, valueY: number))?
 local methods = {}
 api.methods = methods
-
-local hueUVMatrix = matrices.mat3()
-hueUVMatrix:scale(6, 0, 1)
-   :translate(7.5 / myTextureSize.x, 0.5 / myTextureSize.y)
 
 ---@param action auria.wheel.action.slider
 ---@param popup auria.wheel.action_popup
@@ -159,8 +154,8 @@ function api.actionRender(action, delta)
    local newPos = getUnmappedSliderPos(action, popup, wheel.lib.getMousePos())
    if popup.data.pos == newPos then return end
    popup.data.pos = newPos
+   updateSliderValues(action, popup)
    if action.valueChange then
-      updateSliderValues(action, popup)
       action.valueChange(action.value, action.valueY)
    end
    local pos = popup.data.pos

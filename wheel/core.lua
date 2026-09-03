@@ -1212,7 +1212,7 @@ local function renderBreadcrumbs(delta, globalVisible)
 
    local width = 0
 
-   for i, v in pairs(breadcrumbs) do
+   for i, v in ipairs(breadcrumbs) do
       local offset = len - i
       local visible = math.clamp(offset, 0, 1)
       if i >= 4 then

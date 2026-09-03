@@ -83,6 +83,22 @@ do
    end
 end
 
+mainPage:newSelection()
+   :setTitle("Selection")
+   :setChoices({
+      "cat",
+      "fox",
+      "dragon",
+   })
+   :setIconEmoji(":notepad:")
+   :onValueChange(function(i, str)
+      host:setActionbar(str)
+   end)
+   :onValueChangeFinish(function(i, str)
+      host:setActionbar("confirmed "..str)
+   end)
+   :setValue("fox")
+
 mainPage:newAction()
    :setTitle("New action")
    :setIconEmoji(":+1:")

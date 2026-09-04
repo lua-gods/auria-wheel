@@ -1,4 +1,4 @@
-local wheel = require("wheel.main")
+local wheel = require("auria_wheel.main")
 
 local mainPage = wheel.newPage()
 wheel.setPage(mainPage)

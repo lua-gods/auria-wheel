@@ -718,6 +718,8 @@ function mod.lib.makeActionPopup(action, time)
          time = 0,
          ---@type Vector3?
          pos = nil,
+         ---@type Vector4?
+         size = nil,
       }
       actionTypeData.createPopup(action, actionData.popup)
    end
@@ -1215,9 +1217,17 @@ local function renderPage(page, delta, globalVisible)
          end
          local popup = actionData.popup
          if popup then
+            local myPos = (popup.pos or pos) - vec(0, 0, 50)
+            local mySize = popup.size
+            if mySize then
+               local winSize = client.getScaledWindowSize()
+               local winSizeHalf = winSize * 0.5
+               myPos.x = math.clamp(myPos.x, mySize.x - winSizeHalf.x, winSizeHalf.x - mySize.z)
+               myPos.y = math.clamp(myPos.y, mySize.y - winSizeHalf.y, winSizeHalf.y - mySize.w)
+            end
             local popupVisible = math.lerp(popup.oldVisible, popup.visible, delta) * myVisible
             popup.model:setScale(popupVisible)
-               :setPos((popup.pos or pos) - vec(0, 0, 50))
+               :setPos(myPos)
                :setOpacity(popupVisible)
          end
          local typeData = mod.lib.getActionData(action)

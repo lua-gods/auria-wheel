@@ -80,6 +80,7 @@ function api.createPopup(action, popup)
       choices = choices,
       indicator = indicator,
    }
+   popup.size = vec(size.x, size.y, size.x, size.y) * 0.5
    -- update
    updateIndicatorPos(action)
 end

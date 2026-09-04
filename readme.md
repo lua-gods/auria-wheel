@@ -5,7 +5,7 @@ To see all functions easily in your code editor its reccomended to use sumneko's
 ## Download and install
 Click green `Code` button and click `download ZIP`
 
-and then copy `auria_wheel` folder to your avatar
+then copy `auria_wheel` folder to your avatar
 ## Setup and examples
 Require `main` file of library
 ```lua

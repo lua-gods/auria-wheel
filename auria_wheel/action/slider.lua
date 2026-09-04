@@ -72,6 +72,7 @@ function api.createPopup(action, popup)
       textX = textX,
       textY = textY,
    }
+   popup.size = vec(bgSize.x, bgSize.y, bgSize.x, bgSize.y) * 0.5
 end
 
 ---@param value number

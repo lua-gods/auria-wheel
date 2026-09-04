@@ -30,4 +30,10 @@ page:newToggle()
       vanilla_model.ARMOR:setVisible(value)
    end)
 ```
+You can use `action:setPage` to make clicking action open specific page
+```lua
+page:newAction()
+   :setTitle("outfits")
+   :setPage(outfitsPage)
+``` 
 See [`example.lua`](example.lua) for more examples

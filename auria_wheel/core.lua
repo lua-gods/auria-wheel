@@ -156,7 +156,7 @@ function mod.newPage()
 end
 
 ---sets function with will be run when page is opened
----@param func function
+---@param func? function
 ---@return auria.wheel.page
 function Page:onOpen(func)
    self.openFunc = func
@@ -164,7 +164,7 @@ function Page:onOpen(func)
 end
 
 ---sets function with will be run when page is closed
----@param func function
+---@param func? function
 ---@return auria.wheel.page
 function Page:onClose(func)
    self.closeFunc = func

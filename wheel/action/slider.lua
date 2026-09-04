@@ -14,6 +14,7 @@ local api = {}
 ---@field rangeY Vector2
 ---@field step number
 ---@field loop boolean
+---@field showValue boolean
 ---@field bgTexture Texture?
 ---@field bgMatrix Matrix3?
 ---@field backgroundSize Vector2
@@ -53,15 +54,24 @@ function api.createPopup(action, popup)
    )
    outline:setPos(bgSize:augmented(-2) / 2)
    model:addChild(outline)
+
+   local textX, textY
+   if action.showValue then
+      textX = model:newText("x")
+      textX:setAlignment("CENTER")
+         :setPos(0, - bgSize.y * 0.5 - 4, 0)
+         :setOutline(true)
+      textY = model:newText("")
+      textY:setPos(bgSize.x * -0.5 - 4, 4)
+         :setOutline(true)
+   end
    -- data
    popup.data = {
       lastValue = vec(0, 0),
       bg = bgModel,
+      textX = textX,
+      textY = textY,
    }
-end
-
-function api.press(action)
-   wheel.lib.makeActionPopup(action)
 end
 
 ---@param value number
@@ -102,6 +112,20 @@ local function getUnmappedSliderPos(action, popup, mousePos)
       return values % 1
    end
    return vec(math.clamp(values.x, 0, 1), math.clamp(values.y, 0, 1))
+end
+
+---@param action auria.wheel.action.slider
+function api.press(action)
+   local popup, isNew = wheel.lib.makeActionPopup(action)
+   if not isNew then
+      return
+   end
+   local mousePos = wheel.lib.getMousePos()
+   local valuePos = getUnmappedSliderPos(action, popup, mousePos)
+   valuePos.y = 1 - valuePos.y
+   local pos = -mousePos
+   pos = pos + action.backgroundSize * (valuePos - 0.5)
+   popup.pos = pos:augmented(0)
 end
 
 ---@param n number
@@ -160,6 +184,12 @@ function api.actionRender(action, delta)
    end
    local pos = popup.data.pos
    local tex = action.bgTexture
+   if popup.data.textX then
+      popup.data.textX:setText(tostring(action.value))
+         :setVisible(action.range.x ~= action.range.y)
+      popup.data.textY:setText(tostring(action.valueY))
+         :setVisible(action.rangeY.x ~= action.rangeY.y)
+   end
    if not tex then
       popup.data.bg:setUVPixels(1 - pos.x, pos.y - 1)
       return
@@ -179,6 +209,7 @@ function Page:newSlider()
    slider.rangeY = vec(0, 0)
    slider.step = 0
    slider.loop = false
+   slider.showValue = true
    return slider
 end
 
@@ -244,10 +275,18 @@ function methods:setValue(value, valueY)
 end
 
 ---makes slider loop instead of clamp
----@param loop any
+---@param loop boolean
 ---@return auria.wheel.action.slider
 function methods:setLoop(loop)
    self.loop = loop
+   return self
+end
+
+---sets if value should be displayed
+---@param show boolean
+---@return auria.wheel.action.slider
+function methods:setShowValue(show)
+   self.showValue = show
    return self
 end
 

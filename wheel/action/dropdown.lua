@@ -102,6 +102,7 @@ function api.release(action)
       return
    end
    local popup = action.renderData.popup
+   if not popup then return end
    popup.data.startValue = action.value
    popup.data.mouseStart = nil
 end

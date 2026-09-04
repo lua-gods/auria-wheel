@@ -6,5 +6,8 @@ local conf = {
    ---@type "HOLD"|"MIXED"|"TOGGLE"
    mode = "MIXED",
    holdTime = 250, -- in ms, how long keybinds has to be clicked to be considered held
+
+   animationSpeed = 0.5, -- animation speed, between 0 and 1
+   noAnimations = false,
 }
 return conf

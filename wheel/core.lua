@@ -784,8 +784,8 @@ local function makePageAction(page, i)
    ---@class auria.wheel.action.render
    local myData = {
       model = model,
-      scale = 1,
-      oldScale = 1,
+      scale = 1.5,
+      oldScale = 1.5,
       text = textTask,
       ---@type auria.wheel.action_popup?
       popup = nil,
@@ -921,9 +921,13 @@ function Page:setGroupSize(n)
 end
 
 function events.tick()
+   local animSpeed = mod.conf.animationSpeed
+   if mod.conf.noAnimations then
+      animSpeed = 1
+   end
    -- anim
    oldVisibleAnim = visibleAnim
-   visibleAnim = math.lerp(visibleAnim, isEnabled and 1 or 0, 0.5)
+   visibleAnim = math.lerp(visibleAnim, isEnabled and 1 or 0, animSpeed)
    -- blur
    local blurToApply = isEnabled and mod.conf.postEffect or nil
    if blurApplied ~= blurToApply then
@@ -995,11 +999,11 @@ function events.tick()
          target = 2
       end
       data.oldScale = data.scale
-      data.scale = math.lerp(data.scale, target, 0.5)
+      data.scale = math.lerp(data.scale, target, animSpeed)
       for i, group in pairs(data.groups) do
          group.oldRot = group.rot
          local myTarget = (i - page.currentGroup) * 1.2
-         group.rot = math.lerp(group.rot, myTarget, 0.5)
+         group.rot = math.lerp(group.rot, myTarget, animSpeed)
       end
       local removePage = false
       local removedAnyAction = false
@@ -1024,7 +1028,7 @@ function events.tick()
             end
          end
          actionData.oldScale = actionData.scale
-         actionData.scale = math.lerp(actionData.scale, myTarget, 0.5)
+         actionData.scale = math.lerp(actionData.scale, myTarget, animSpeed)
          typeData.actionTick(action)
          if popup then
             local popupTarget = 0
@@ -1040,7 +1044,7 @@ function events.tick()
                popup.time = 0
             end
             popup.oldVisible = popup.visible
-            popup.visible = math.lerp(popup.visible, popupTarget, 0.5)
+            popup.visible = math.lerp(popup.visible, popupTarget, animSpeed)
             if popup.visible < 0.0001 then
                popup.model:remove()
                actionData.popup = nil
@@ -1068,7 +1072,7 @@ function events.tick()
    -- update breadcrumbs
    breadcrumbOldLen = breadcrumbLen
    local target = #pageHistory
-   breadcrumbLen = math.lerp(breadcrumbLen, target, 0.5)
+   breadcrumbLen = math.lerp(breadcrumbLen, target, animSpeed)
    local loaded = math.max(target, math.ceil(breadcrumbLen))
    for i = #breadcrumbs, loaded + 1, -1 do
       local v = breadcrumbs[i]
@@ -1268,6 +1272,9 @@ local function renderBreadcrumbs(delta, globalVisible)
 end
 
 hudModelRoot.preRender = function(delta)
+   if mod.conf.noAnimations then
+      delta = 1
+   end
    local globalVisible = math.lerp(oldVisibleAnim, visibleAnim, delta)
    if globalVisible < 0.05 then
       hudModel:setVisible(false)

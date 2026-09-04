@@ -1,4 +1,5 @@
-local wheel = require("./init")  ---@class auria.wheel
+---@class auria.wheel
+local wheel = require("./init")
 
 require("./color_picker")
 

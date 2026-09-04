@@ -5,10 +5,16 @@ local mod = {}
 mod.conf = require("./conf")
 --extra variables and functions used for extending wheel features like custom action types
 mod.lib = {}
----@class auria.wheel.page
+---@class auria.wheel.action_maker
+local ActionMaker = {}
+mod.actions = ActionMaker
+
+---@class auria.wheel.page : auria.wheel.action_maker
 local Page = {}
-Page.__index = Page
 mod.lib.page = Page
+Page.__index = function(t, i)
+   return rawget(Page, i) or ActionMaker[i]
+end
 
 ---@class auria.wheel.action
 local Action = {}
@@ -136,14 +142,13 @@ function mod.newPage()
    ---@class auria.wheel.page
    local obj = {
       ---@type auria.wheel.action[]
-      actions = {},
+      actions = {}, -- list with all actions, you can edit it manually if you want to
       ---@type function?
       openFunc = nil,
       ---@type function?
       closeFunc = nil,
       ---@type number?
       groupSize = nil,
-      ---@type number
       currentGroup = 1,
    }
    setmetatable(obj, Page)
@@ -409,9 +414,9 @@ end
 
 ---makes action with specified type
 ---@param myType string
----@param page? auria.wheel.page
+---@param page? auria.wheel.page|auria.wheel.action_maker
 ---@return auria.wheel.action|any
-function mod.newAction(myType, page)
+function mod.lib.newAction(myType, page)
    ---@class auria.wheel.action
    local obj = {
       title = "Hello!",
@@ -437,7 +442,7 @@ function mod.newAction(myType, page)
    }
    setmetatable(obj, actionTypes[myType].mt)
    obj:setIconModel(mod.lib.models.default_icon)
-   if page then
+   if page and page.actions then
       table.insert(page.actions, obj)
    end
    return obj
@@ -495,8 +500,8 @@ end
 mod.lib.newActionType("normal", {})
 
 ---@return auria.wheel.action
-function Page:newAction()
-   return mod.newAction("normal", self)
+function ActionMaker:newAction()
+   return mod.lib.newAction("normal", self)
 end
 
 local function getActionsRotScaleAndOffset(count)

@@ -1,6 +1,6 @@
 local wheel = require("../core") ---@class auria.wheel
----@class auria.wheel.page
-local Page = wheel.lib.page
+---@class auria.wheel.action_maker
+local ActionMaker = wheel.actions
 
 ---@type auria.wheel.action_data
 local api = {}
@@ -67,8 +67,8 @@ end
 
 ---creates new toggle
 ---@return auria.wheel.action.toggle
-function Page:newToggle()
-   local action = wheel.newAction("toggle", self)
+function ActionMaker:newToggle()
+   local action = wheel.lib.newAction("toggle", self)
    action.value = false
    return action
 end

@@ -1,7 +1,7 @@
 local wheel = require("./init") ---@class auria.wheel
 
----@class auria.wheel.page
-local Page = wheel.lib.page
+---@class auria.wheel.action_maker
+local ActionMaker = wheel.actions
 
 ---@type auria.wheel.action_data
 local api = {}
@@ -241,8 +241,8 @@ end
 
 ---creates new color picker
 ---@return auria.wheel.action.color_picker
-function Page:newColorPicker()
-   local action = wheel.newAction("color_picker", self)
+function ActionMaker:newColorPicker()
+   local action = wheel.lib.newAction("color_picker", self)
    action.color = vec(1, 1, 1)
    action:setPage(mainPage)
       :setTitle("Color")

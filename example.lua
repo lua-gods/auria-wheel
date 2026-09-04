@@ -95,8 +95,10 @@ do
    end
 end
 
-mainPage:newAction()
-   :setTitle("New action")
+local addActionBtn = wheel.actions:newAction()
+table.insert(mainPage.actions, addActionBtn)
+
+addActionBtn:setTitle("New action")
    :setIconEmoji(":+1:")
    :onPress(function()
       mainPage:newAction()

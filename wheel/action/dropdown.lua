@@ -1,6 +1,6 @@
 local wheel = require("../core") ---@class auria.wheel
----@class auria.wheel.page
-local Page = wheel.lib.page
+---@class auria.wheel.action_maker
+local ActionMaker = wheel.actions
 
 ---@type auria.wheel.action_data
 local api = {}
@@ -173,8 +173,8 @@ end
 
 ---creates new dropdown
 ---@return auria.wheel.action.dropdown
-function Page:newDropdown()
-   local obj = wheel.newAction("dropdown", self)
+function ActionMaker:newDropdown()
+   local obj = wheel.lib.newAction("dropdown", self)
    obj.value = 0
    obj.choices = {}
    return obj

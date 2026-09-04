@@ -1,6 +1,6 @@
 local wheel = require("../core") ---@class auria.wheel
----@class auria.wheel.page
-local Page = wheel.lib.page
+---@class auria.wheel.action_maker
+local ActionMaker = wheel.actions
 
 local defaultBgSize = vec(96, 12)
 
@@ -200,8 +200,8 @@ end
 
 ---creates new slider
 ---@return auria.wheel.action.slider
-function Page:newSlider()
-   local slider = wheel.newAction("slider", self)
+function ActionMaker:newSlider()
+   local slider = wheel.lib.newAction("slider", self)
    slider.value = 0
    slider.valueY = 0
    slider.backgroundSize = defaultBgSize

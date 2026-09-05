@@ -61,7 +61,6 @@ local selectedActionPage = nil
 local oldVisibleAnim, visibleAnim = 0, 0
 
 local hudOverlay = hudModel:newSprite("overlay")
-local overlayColor = vec(0.2, 0.22, 0.25)
 hudOverlay:setTexture(mod.lib.texture, myTextureSize:unpack())
    :setRegion(1, 1)
 
@@ -1301,7 +1300,7 @@ hudModelRoot.preRender = function(delta)
    hudModel:setPos(centerOffset)
    hudOverlay:setPos(vec(0, 0, 50) - centerOffset)
       :setScale((winSize / myTextureSize):augmented(0))
-      :setColor(overlayColor:augmented(globalVisible * 0.5))
+      :setColor(mod.conf.overlayColor * vec(1, 1, 1, globalVisible))
    if currentPage then
       getRenderPage(currentPage)
    end

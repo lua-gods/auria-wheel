@@ -97,13 +97,14 @@ end
 ---@param action auria.wheel.action.slider
 ---@param popup auria.wheel.action_popup
 ---@param mousePos Vector2
+---@param fallback? number
 ---@return Vector2
-local function getUnmappedSliderPos(action, popup, mousePos)
+local function getUnmappedSliderPos(action, popup, mousePos, fallback)
    local offset = mousePos - popup.data.mouseStart
    offset = offset / action.backgroundSize
    offset.y = -offset.y
    local value = popup.data.lastValue
-   local fallback = action.bgTexture and 0.5 or 1
+   fallback = fallback or (action.bgTexture and 0.5 or 1)
    local step = action.step
    local values = vec(
       unmapSliderValue(value.x, action.range, fallback, offset.x, step),
@@ -122,7 +123,7 @@ function api.press(action)
       return
    end
    local mousePos = wheel.lib.getMousePos()
-   local valuePos = getUnmappedSliderPos(action, popup, mousePos)
+   local valuePos = getUnmappedSliderPos(action, popup, mousePos, 0.5)
    valuePos.y = 1 - valuePos.y
    local pos = -mousePos
    pos = pos + action.backgroundSize * (valuePos - 0.5)

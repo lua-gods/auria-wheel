@@ -1,4 +1,4 @@
-local wheel = require("./init") ---@class auria.wheel
+local wheel = require("./core") ---@class auria.wheel
 
 ---@class auria.wheel.action_maker
 local ActionMaker = wheel.actions

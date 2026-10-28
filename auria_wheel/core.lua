@@ -1173,7 +1173,6 @@ local function renderPage(page, delta, globalVisible)
    opacity = opacity * globalVisible
    data.model:setVisible(true)
       :setScale(math.min(visible, 1) * globalVisible)
-      :setOpacity(globalVisible)
 
    local posScale = math.max(visible, 1)
    posScale = math.lerp(posScale, 1, 0.25) * 80
@@ -1184,11 +1183,16 @@ local function renderPage(page, delta, globalVisible)
 
    makePageGroup(page, page.currentGroup)
 
+   local iconOpacity = 1 - opacity
+   iconOpacity = iconOpacity * iconOpacity
+   iconOpacity = 1 - iconOpacity
+
    local maxActions = #page.actions
    for k, group in pairs(data.groups) do
       local groupRot = math.lerp(group.oldRot, group.rot, delta)
       local myVisible = 1 - math.min(math.abs(groupRot), 1)
       local myOpacity = myVisible * opacity
+      local myIconOpacity = myVisible * iconOpacity
       local mySizeScale = myVisible * sizeScale
       groupRot = groupRot * 30
       local posMat = matrices.rotation3(0, 0, groupRot)
@@ -1209,6 +1213,7 @@ local function renderPage(page, delta, globalVisible)
             :setScale(scale * mySizeScale)
             :setRot(0, 0, groupRot)
             :setVisible(myVisible > 0.02)
+            :setOpacity(myIconOpacity)
          actionData.text:setOpacity(myOpacity)
 
          if action.iconRender then

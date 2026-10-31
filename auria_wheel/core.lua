@@ -937,7 +937,7 @@ end
 ---@param n number
 ---@return auria.wheel.page
 function Page:setRotationOffset(n)
-   self.rotationOffset = math.deg(n)
+   self.rotationOffset = math.rad(n)
    return self
 end
 

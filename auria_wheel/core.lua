@@ -91,6 +91,9 @@ do
    breadcrumbsEllipsisWidth = client.getTextWidth(text) + 12
 end
 
+local currentPageRadius = 1
+local oldCurrentPageRadius = 1
+
 function mod.setEnabled(state)
    if state == isEnabled then
       return
@@ -149,6 +152,8 @@ function mod.newPage()
       ---@type number?
       groupSize = nil,
       currentGroup = 1,
+      rotationOffset = 0,
+      actionsRadius = 1,
    }
    setmetatable(obj, Page)
    return obj
@@ -551,6 +556,7 @@ local function updatePageGroupIndicator(page)
    }
    local width = math.ceil(client.getTextWidth(text) / 2)
    data.groupIndicator:setVisible(true)
+      :setPos(0, page.actionsRadius * -80 - 48, 0)
    data.groupIndicatorText:setText(text)
    data.groupIndicator.up:setPos(width, 0, 0)
       :setVisible(current > 1)
@@ -567,7 +573,7 @@ local function getRenderPage(page)
    end
    local model = hudModel:newPart("")
    local groupIndicator = model:newPart("")
-   groupIndicator:setPos(0, -128, 0)
+   groupIndicator
       :addChild(mod.lib.models.group_arrow_up  :copy("up"  ))
       :addChild(mod.lib.models.group_arrow_down:copy("down"))
    local textTask = groupIndicator:newText("")
@@ -817,6 +823,7 @@ local function rebuildGroupActions(page, group, k)
    updatePageGroup(group, page, k)
    local lastAction = math.min(group.max, #page.actions)
    local rotScale, rotOffset = getActionsRotScaleAndOffset(lastAction - group.min + 1)
+   rotOffset = rotOffset + page.rotationOffset
    local j = 0
    for i = group.min, lastAction do
       j = j + 1
@@ -926,6 +933,22 @@ function Page:setGroupSize(n)
    return self
 end
 
+---sets rotation offset of page, in degrees
+---@param n number
+---@return auria.wheel.page
+function Page:setRotationOffset(n)
+   self.rotationOffset = math.deg(n)
+   return self
+end
+
+---sets randius of page
+---@param n number
+---@return auria.wheel.page
+function Page:setRadius(n)
+   self.actionsRadius = n
+   return self
+end
+
 function events.tick()
    local animSpeed = mod.conf.animationSpeed
    if mod.conf.noAnimations then
@@ -953,6 +976,11 @@ function events.tick()
    if (oldVisibleAnim + visibleAnim < 0.05) and not isEnabled then
       return
    end
+   -- radius
+   oldCurrentPageRadius = currentPageRadius
+   if currentPage then
+      currentPageRadius = math.lerp(currentPageRadius, currentPage.actionsRadius, mod.conf.animationSpeed)
+   end
    -- select
    local isClicked = mod.lib.isClicked()
    if not isEnabled then
@@ -967,10 +995,11 @@ function events.tick()
          local mousePos = mod.lib.getMousePos()
          getRenderPage(currentPage)
          local dist = mousePos:length()
-         if dist > 50 then
+         if dist > 80 * currentPage.actionsRadius - 30 then
             local min, max = getGroupSize(currentPage, currentPage.currentGroup)
             local actionCount = math.min(max, #currentPage.actions) - min + 1
             local angle = math.atan2(mousePos.x, -mousePos.y) - (pageAngleOffsets[actionCount] or 0)
+            angle = angle - currentPage.rotationOffset
             local i = ((angle / math.pi / 2) % 1) * actionCount
             local center = math.floor(i) + 0.5
             local diff = math.abs(center - i) / actionCount * 360
@@ -1175,7 +1204,7 @@ local function renderPage(page, delta, globalVisible)
       :setScale(math.min(visible, 1) * globalVisible)
 
    local posScale = math.max(visible, 1)
-   posScale = math.lerp(posScale, 1, 0.25) * 80
+   posScale = math.lerp(posScale, 1, 0.25) * 80 * page.actionsRadius
    local sizeScale = math.clamp(2 - visible, 0, 1)
 
    data.groupIndicator:setOpacity(opacity)
@@ -1285,7 +1314,11 @@ local function renderBreadcrumbs(delta, globalVisible)
       width = width + myWidth
    end
 
-   local pos = vec(math.round(width / 2), 124, 0)
+   local pos = vec(
+      math.round(width / 2),
+      math.lerp(oldCurrentPageRadius, currentPageRadius, delta) * 80 + 44,
+      0
+   )
    breadcrumbsModel:setScale(globalVisible)
       :setPos(pos * globalVisible)
 end

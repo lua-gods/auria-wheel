@@ -94,12 +94,50 @@ end
 local currentPageRadius = 1
 local oldCurrentPageRadius = 1
 
+local keybindToggleMode = false
+
+---@type auria.wheel.action?
+local textInputAction
+local textInputBlockLetters = false
+
+---@param action auria.wheel.action?
+function mod.lib.setInputAction(action)
+   if action == textInputAction then
+      return
+   end
+   if textInputAction then
+      local typeData = mod.lib.getActionData(textInputAction)
+      if typeData.textInputChanged then
+         typeData.textInputChanged(textInputAction, false)
+      end
+   end
+   textInputAction = action
+   if action then
+      keybindToggleMode = true
+      if mod.conf.keybind:isPressed() then
+         textInputBlockLetters = true
+      end
+      local typeData = mod.lib.getActionData(action)
+      if typeData.textInputChanged then
+         typeData.textInputChanged(action, true)
+      end
+   end
+end
+
+---@return auria.wheel.action?
+function mod.lib.getInputAction()
+   return textInputAction
+end
+
 function mod.setEnabled(state)
    if state == isEnabled then
       return
    end
    isEnabled = state
    host:setUnlockCursor(state)
+   if not isEnabled then
+      mod.lib.setInputAction()
+   end
 end
 
 function mod.isEnabled()
@@ -108,13 +146,16 @@ end
 
 local f3Key = keybinds:newKeybind('wheel - f3', 'key.keyboard.f3')
 do
-   local toggleMode = false
    local lastClick = -1
    mod.conf.keybind.press = function()
       if f3Key:isPressed() then return end
-      if toggleMode and isEnabled then
+      if textInputAction then
+         keybindToggleMode = true
+         return isEnabled
+      end
+      if keybindToggleMode and isEnabled then
          mod.setEnabled(false)
-         toggleMode = false
+         keybindToggleMode = false
          return true
       end
       mod.setEnabled(true)
@@ -122,11 +163,15 @@ do
       return true
    end
    mod.conf.keybind.release = function()
+      if textInputAction then
+         textInputBlockLetters = false
+         return
+      end
       if mod.conf.mode == "HOLD" then
          mod.setEnabled(false)
          return
       elseif mod.conf.mode == "TOGGLE" then
-         toggleMode = true
+         keybindToggleMode = true
          return
       end
       -- mixed
@@ -134,7 +179,7 @@ do
       if diff >= mod.conf.holdTime then
          mod.setEnabled(false)
       else
-         toggleMode = true
+         keybindToggleMode = true
       end
    end
 end
@@ -467,6 +512,9 @@ end
 ---actionRender: (fun(action: auria.wheel.action, delta: number)),
 ---createRenderData: (fun(action: auria.wheel.action)),
 ---updateRenderModel: (fun(action: auria.wheel.action)),
+---keyPressed: (fun(action: auria.wheel.action, key: number, modifiers: number): boolean?),
+---charTyped: (fun(action: auria.wheel.action, char: string)),
+---textInputChanged: (fun(action: auria.wheel.action, state: boolean)),
 ---}
 
 ---@param myType string
@@ -700,7 +748,7 @@ end
 
 ---creates popup for action
 ---@param action auria.wheel.action
----@param time? number
+---@param time number|boolean|nil
 ---@return auria.wheel.action_popup?, boolean?
 function mod.lib.makeActionPopup(action, time)
    local pageData = getRenderPage(selectedActionPage)
@@ -736,7 +784,11 @@ function mod.lib.makeActionPopup(action, time)
          actionTypeData.popupOpened(action, actionData.popup)
       end
    end
-   popup.time = math.max(popup.time, time or 0)
+   if type(time) == "boolean" then
+      popup.time = time and math.huge or 0
+   elseif type(time) == "number" then
+      popup.time = math.max(popup.time, time)
+   end
    return popup, isNew
 end
 
@@ -988,7 +1040,7 @@ function events.tick()
          mod.clickAction(mod.getSelectedAction(), true)
       end
       setSelectedAction(nil, -1)
-   elseif not isClicked then
+   elseif not isClicked and not textInputAction then
       local newIdx = -1
       local newPage = nil
       if currentPage and isEnabled then
@@ -1068,7 +1120,7 @@ function events.tick()
          if popup then
             local popupTarget = 0
             if action == selectedAction then
-               if isClicked then
+               if isClicked or textInputAction then
                   popupTarget = 1
                   popup.time = 0
                elseif popup.time >= 1 then
@@ -1169,6 +1221,44 @@ function events.mouse_scroll(dirRaw)
    end
    currentPage:setCurrentGroup(currentPage.currentGroup - dir)
    return true
+end
+
+function events.key_press(key, state, modifiers)
+   if not textInputAction then return end
+   if state == 0 then
+      return
+   end
+   if textInputBlockLetters and key >= 0 and key <= 255 then
+      return true
+   end
+   local cancel = false
+   local typeData = mod.lib.getActionData(textInputAction)
+   if typeData.keyPressed then
+      cancel = typeData.keyPressed(textInputAction, key, modifiers)
+   else
+      cancel = true
+      mod.lib.setInputAction()
+   end
+   if key == 256 then
+      mod.lib.setInputAction()
+      cancel = true
+   end
+   if (state == 1 or state == 2) and cancel then
+      return true
+   end
+end
+
+function events.char_typed(char, modifiers, codepoint)
+   if not textInputAction then return end
+   if textInputBlockLetters then
+      return
+   end
+   local typeData = mod.lib.getActionData(textInputAction)
+   if typeData.charTyped then
+      typeData.charTyped(textInputAction, char)
+   else
+      mod.lib.setInputAction()
+   end
 end
 
 ---@param action auria.wheel.action

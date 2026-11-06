@@ -95,6 +95,20 @@ do
    end
 end
 
+mainPage:newTextInput()
+   :setTitle("Text input")
+   :setText("Hello")
+   :setCharLimit(64)
+   :setLineLimit(8)
+   :setDefaultText("Example text")
+   :onTextChange(function(text, oldText)
+      host:setActionbar("text changed "..text)
+   end)
+   :onTextChangeFinished(function(text, oldText)
+      print("text changed", text)
+   end)
+
+
 local addActionBtn = wheel.actions:newAction()
 table.insert(mainPage.actions, addActionBtn)
 

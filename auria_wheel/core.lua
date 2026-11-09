@@ -222,6 +222,7 @@ end
 
 ---@param page? auria.wheel.page
 local function setPageRaw(page)
+   mod.lib.setInputAction()
    if currentPage and currentPage.closeFunc then
       currentPage.closeFunc()
    end
@@ -1188,6 +1189,9 @@ leftClickKey.release = function()
 end
 RightClickKey.press = function()
    if not isEnabled then return end
+   if textInputAction then
+      mod.lib.setInputAction()
+   end
    mod.previousPage()
    return true
 end

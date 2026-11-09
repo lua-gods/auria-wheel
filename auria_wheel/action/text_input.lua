@@ -84,6 +84,11 @@ function api.createPopup(action, popup)
       bgSize = vec(-1, -1),
    }
    popup.pos = vec(0, 24, 0)
+end
+
+---@param action auria.wheel.action.text_input
+---@param popup auria.wheel.action_popup
+function api.popupOpened(action, popup)
    updateModel(action)
 end
 

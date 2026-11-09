@@ -1191,8 +1191,9 @@ RightClickKey.press = function()
    if not isEnabled then return end
    if textInputAction then
       mod.lib.setInputAction()
+   else
+      mod.previousPage()
    end
-   mod.previousPage()
    return true
 end
 RightClickKey.release = function()

@@ -94,8 +94,10 @@ end
 
 function api.press(action)
    local popup = wheel.lib.makeActionPopup(action, true)
-   popup.data.blinkTime = -12
-   wheel.lib.setInputAction(action)
+   if popup then
+      popup.data.blinkTime = -12
+      wheel.lib.setInputAction(action)
+   end
 end
 
 function api.release(action)
@@ -110,6 +112,9 @@ end
 ---@param state boolean
 function api.textInputChanged(action, state)
    local popup = wheel.lib.makeActionPopup(action, true)
+   if not popup then
+      return
+   end
    if state then
       popup.data.prevText = action.text
    else
